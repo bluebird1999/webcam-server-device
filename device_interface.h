@@ -17,38 +17,25 @@
  * define
  */
 
-#define		DEVICE_CTRL_SD_INFO					0x0001
-
-
+//control
 //#define		MSG_DEVICE_WIFI						MSG_DEVICE_BASE | 0x0003
 //#define		MSG_DEVICE_GET_WIFISTATUS			MSG_DEVICE_BASE | 0x0004
 //#define		MSG_DEVICE_GET_WIFISTATUS_ACK		MSG_DEVICE_BASE | 0x1004
-//
-//#define		MSG_DEVICE_GET_IRLEDSTATUS			MSG_DEVICE_BASE | 0x0005
-//#define		MSG_DEVICE_GET_IRLEDSTATUS_ACK		MSG_DEVICE_BASE | 0x1005
-//#define		MSG_DEVICE_IRLED					MSG_DEVICE_BASE | 0x0006
-//
-//#define		MSG_DEVICE_IRCUT					MSG_DEVICE_BASE | 0x0007
-//#define		MSG_DEVICE_GET_IRCUTSTATUS			MSG_DEVICE_BASE | 0x0008
-//#define		MSG_DEVICE_GET_IRCUTSTATUS_ACK		MSG_DEVICE_BASE | 0x1008
-
+#define		DEVICE_CTRL_SD_INFO					0x0001
+#define		DEVICE_CTRL_LED						0x0003
 #define		DEVICE_CTRL_AMPLIFIER				0x0009
 #define		DEVICE_CTRL_ADJUST_AUDIO_VOLUME		0x000a
-
 //#define		MSG_DEVICE_MOTOR					MSG_DEVICE_BASE | 0x000b
 #define		DEVICE_CTRL_PART_INFO				0x000c
 #define		DEVICE_CTRL_PART_USER_INFO			0x000d
+#define		DEVICE_CTRL_IR_SWITCH				0x0007
+#define		DEVICE_CTRL_IR_MODE					0x0008
 
-
-#define		DEVICE_ACTION_USER_FORMAT				0x000e
+#define		DEVICE_ACTION_USER_FORMAT			0x000e
 #define		DEVICE_ACTION_SD_FORMAT				0x0002
 
 
-#define		MSG_DEVICE_LED1_ON					MSG_DEVICE_BASE | 0x100f
-#define		MSG_DEVICE_LED1_OFF					MSG_DEVICE_BASE | 0x200f
-#define		MSG_DEVICE_LED2_ON					MSG_DEVICE_BASE | 0x300f
-#define		MSG_DEVICE_LED2_OFF					MSG_DEVICE_BASE | 0x400f
-
+//message
 #define		MSG_DEVICE_BASE						(SERVER_DEVICE<<16)
 #define		MSG_DEVICE_SIGINT					MSG_DEVICE_BASE | 0x0000
 #define		MSG_DEVICE_SIGINT_ACK				MSG_DEVICE_BASE | 0x1000
@@ -102,6 +89,10 @@ typedef struct part_msg_info
 
 //iot struct ------------------------------------------------------------
 typedef struct device_iot_config_t {
+	int ir_mode;
+	int ircut_inoff;
+	int led1_onoff;
+	int led2_onoff;
 	int on_off;
 	sd_info_ack_t 		sd_iot_info;
 	sd_info_ack_t 		user_part_iot_info;

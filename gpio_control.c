@@ -23,13 +23,62 @@
 #define LED1_GPIO				9 //blue
 #define LED2_GPIO				22 //orange
 #define SPK_GPIO				11
+#define IRCUR_AIN				16
+#define IRCUR_BIN				17
+#define IRLED					6
 
 //static
-static struct rts_gpio *rts_gpio_led1 = NULL;
-static struct rts_gpio *rts_gpio_led2 = NULL;
-static struct rts_gpio *rts_gpio_spk  = NULL;
+static struct rts_gpio *rts_gpio_led1 			= NULL;
+static struct rts_gpio *rts_gpio_led2 			= NULL;
+static struct rts_gpio *rts_gpio_spk  			= NULL;
+static struct rts_gpio *rts_gpio_ircutain  		= NULL;
+static struct rts_gpio *rts_gpio_ircutbin  		= NULL;
+static struct rts_gpio *rts_gpio_irled		  	= NULL;
 
 static int set_gpio_value(struct rts_gpio *rts_gpio, int value);
+
+int ctl_ircut(int on_off)
+{
+	int ret;
+	//open
+	if(on_off == 1)
+	{
+		ret = set_gpio_value(rts_gpio_ircutain, LED_ON);
+		if(ret)
+		{
+			log_err("set gpio %d failed\n",IRCUR_AIN);
+			return -1;
+		}
+		ret = set_gpio_value(rts_gpio_ircutbin, LED_OFF);
+		if(ret)
+		{
+			log_err("set gpio %d failed\n",IRCUR_BIN);
+			return -1;
+		}
+	} else {
+		ret = set_gpio_value(rts_gpio_ircutbin, LED_ON);
+		if(ret)
+		{
+			log_err("set gpio %d failed\n",IRCUR_AIN);
+			return -1;
+		}
+		ret = set_gpio_value(rts_gpio_ircutain, LED_OFF);
+		if(ret)
+		{
+			log_err("set gpio %d failed\n",IRCUR_BIN);
+			return -1;
+		}
+	}
+
+	return ret;
+}
+
+int ctl_irled(int on_off)
+{
+	//1 -> disable
+	//0 -> enable
+	return set_gpio_value(rts_gpio_irled, !on_off);
+}
 
 int ctl_spk_enable(int on_off)
 {
@@ -102,6 +151,51 @@ int init_led_gpio()
 		rts_io_gpio_free(rts_gpio_spk);
 		return -1;
 	}
+
+	//ircutain
+	rts_gpio_ircutain = rts_io_gpio_request(DOMAIN_GPIO_SYSTEM, IRCUR_AIN);
+	if(!rts_gpio_ircutain)
+	{
+		log_err("can not requset gpio num %d\n", IRCUR_AIN);
+		return -1;
+	}
+
+	if(rts_io_gpio_set_direction(rts_gpio_ircutain, GPIO_OUTPUT))
+	{
+		log_err("can not set gpio %d dir\n", IRCUR_AIN);
+		rts_io_gpio_free(rts_gpio_ircutain);
+		return -1;
+	}
+
+	//ircutbin
+	rts_gpio_ircutbin = rts_io_gpio_request(DOMAIN_GPIO_SYSTEM, IRCUR_BIN);
+	if(!rts_gpio_ircutbin)
+	{
+		log_err("can not requset gpio num %d\n", IRCUR_BIN);
+		return -1;
+	}
+
+	if(rts_io_gpio_set_direction(rts_gpio_ircutbin, GPIO_OUTPUT))
+	{
+		log_err("can not set gpio %d dir\n", IRCUR_BIN);
+		rts_io_gpio_free(rts_gpio_ircutbin);
+		return -1;
+	}
+
+	//irled
+	rts_gpio_irled = rts_io_gpio_request(DOMAIN_GPIO_SYSTEM, IRLED);
+	if(!rts_gpio_irled)
+	{
+		log_err("can not requset gpio num %d\n", IRLED);
+		return -1;
+	}
+
+	if(rts_io_gpio_set_direction(rts_gpio_irled, GPIO_OUTPUT))
+	{
+		log_err("can not set gpio %d dir\n", IRLED);
+		rts_io_gpio_free(rts_gpio_irled);
+		return -1;
+	}
 	return 0;
 }
 
@@ -110,6 +204,9 @@ int uninit_led_gpio()
 	rts_io_gpio_free(rts_gpio_led1);
 	rts_io_gpio_free(rts_gpio_led2);
 	rts_io_gpio_free(rts_gpio_spk);
+	rts_io_gpio_free(rts_gpio_ircutain);
+	rts_io_gpio_free(rts_gpio_ircutbin);
+	rts_io_gpio_free(rts_gpio_irled);
 
 	return 0;
 }

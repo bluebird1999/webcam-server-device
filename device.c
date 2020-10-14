@@ -64,12 +64,44 @@ static int send_message(int receiver, message_t *msg);
 static int iot_get_sd_info(device_iot_config_t *tmp);
 static int iot_get_part_info(device_iot_config_t *tmp);
 static int iot_adjust_volume(void* arg);
+static int iot_ctrl_led(void* arg);
 static int iot_ctrl_amplifier(void* arg);
+static int iot_ctrl_ircut(void* arg);
 /*
  * %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
  * %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
  * %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
  */
+static int iot_ctrl_irled(void* arg)
+{
+	device_iot_config_t *tmp = NULL;
+	int ret;
+
+	if(arg == NULL)
+		return -1;
+
+	tmp = (device_iot_config_t *)arg;
+
+	ret = ctl_irled(tmp->ir_mode);
+
+	return ret;
+}
+
+static int iot_ctrl_ircut(void* arg)
+{
+	device_iot_config_t *tmp = NULL;
+	int ret;
+
+	if(arg == NULL)
+		return -1;
+
+	tmp = (device_iot_config_t *)arg;
+
+	ret = ctl_ircut(tmp->ircut_inoff);
+
+	return ret;
+}
+
 static int iot_ctrl_amplifier(void* arg)
 {
 	device_iot_config_t *tmp = NULL;
@@ -81,6 +113,29 @@ static int iot_ctrl_amplifier(void* arg)
 	tmp = (device_iot_config_t *)arg;
 
 	ret = ctl_spk(&tmp->on_off);
+
+	return ret;
+}
+
+static int iot_ctrl_led(void* arg)
+{
+	device_iot_config_t *tmp = NULL;
+	int ret;
+
+	if(arg == NULL)
+		return -1;
+
+	tmp = (device_iot_config_t *)arg;
+
+	if(tmp->led1_onoff == 1)
+		ret = set_blue_led_on();
+	else if (tmp->led1_onoff == 0)
+		ret = set_blue_led_off();
+
+	if(tmp->led2_onoff == 1)
+		ret = set_orange_led_on();
+	else if (tmp->led2_onoff == 0)
+		ret = set_orange_led_off();
 
 	return ret;
 }
@@ -107,7 +162,7 @@ static int iot_adjust_volume(void* arg)
 static int iot_get_part_user_info(device_iot_config_t *tmp)
 {
 	void *para = NULL;
-	sd_info_ack_t *info;
+	sd_info_ack_t *info = NULL;
 	int ret;
 
 	if(tmp == NULL)
@@ -130,7 +185,7 @@ static int iot_get_part_user_info(device_iot_config_t *tmp)
 static int iot_get_part_info(device_iot_config_t *tmp)
 {
 	void *para = NULL;
-	part_msg_info_t *info;
+	part_msg_info_t *info = NULL;
 	int ret;
 
 	if(tmp == NULL)
@@ -153,7 +208,7 @@ static int iot_get_part_info(device_iot_config_t *tmp)
 static int iot_get_sd_info(device_iot_config_t *tmp)
 {
 	void *para = NULL;
-	sd_info_ack_t *info;
+	sd_info_ack_t *info = NULL;
 	int ret;
 
 	if(tmp == NULL)
@@ -318,11 +373,11 @@ static int server_message_proc(void)
 		} else if( msg.arg_in.cat == DEVICE_CTRL_PART_INFO) {
 			ret = iot_get_part_info(&tmp);
 			send_iot_ack(&msg, &send_msg, MSG_DEVICE_GET_PARA_ACK, msg.receiver, ret,
-					NULL, 0);
+					&tmp, sizeof(device_iot_config_t));
 		} else if( msg.arg_in.cat == DEVICE_CTRL_PART_USER_INFO) {
 			ret = iot_get_part_user_info(&tmp);
 			send_iot_ack(&msg, &send_msg, MSG_DEVICE_GET_PARA_ACK, msg.receiver, ret,
-					NULL, 0);
+					&tmp, sizeof(device_iot_config_t));
 		}
 		break;
 	case MSG_DEVICE_ACTION:
@@ -345,70 +400,19 @@ static int server_message_proc(void)
 			ret = iot_adjust_volume(msg.arg);
 			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
 					NULL, 0);
+		} else if( msg.arg_in.cat == DEVICE_CTRL_LED ) {
+			ret = iot_ctrl_led(msg.arg);
+			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
+					NULL, 0);
+		} else if( msg.arg_in.cat == DEVICE_CTRL_IR_SWITCH ) {
+			ret = iot_ctrl_ircut(msg.arg);
+			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
+					NULL, 0);
+		} else if( msg.arg_in.cat == DEVICE_CTRL_IR_MODE ) {
+			//ret = iot_ctrl_irct(msg.arg);
+			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
+					NULL, 0);
 		}
-		break;
-
-
-//	case MSG_DEVICE_SD_FORMAT:
-//		//need times , depend on size of sd
-//		format_sd();
-//		break;
-//	case MSG_DEVICE_SD_INFO:
-//		send_msg.arg = NULL;
-//		ret = get_sd_info(&send_msg.arg, &size);
-//		if(!ret)
-//		{
-//			send_msg.arg_size = size;
-//			send_msg.message = MSG_DEVICE_SD_INFO_ACK;
-//			send_msg.result = ret;
-//			server_dispatch_message(&send_msg, msg.receiver);
-//			msg_free(&send_msg);
-//		}
-//		break;
-//	case MSG_DEVICE_ADJUST_AUDIO_VOLUME:
-//		adjust_audio_volume(msg.arg);
-//		break;
-//	case MSG_DEVICE_CTL_AMPLIFIER:
-//		ctl_spk(msg.arg);
-//		break;
-//	case MSG_DEVICE_PART_INFO:
-//		send_msg.arg = NULL;
-//		ret = get_part_info(&send_msg.arg, &size);
-//		if(!ret)
-//		{
-//			send_msg.arg_size = size;
-//			send_msg.message = MSG_DEVICE_PART_INFO_ACK;
-//			send_msg.result = ret;
-//			server_dispatch_message(&send_msg, msg.receiver);
-//			msg_free(&send_msg);
-//		}
-//		break;
-//	case MSG_DEVICE_PART_USER_INFO:
-//		send_msg.arg = NULL;
-//		ret = get_user_info(&send_msg.arg, &size);
-//		if(!ret)
-//		{
-//			send_msg.arg_size = size;
-//			send_msg.message = MSG_DEVICE_PART_USER_INFO_ACK;
-//			send_msg.result = ret;
-//			server_dispatch_message(&send_msg, msg.receiver);
-//			msg_free(&send_msg);
-//		}
-//		break;
-//	case MSG_DEVICE_USER_FORMAT:
-//		ret = format_userdata();
-//		break;
-	case MSG_DEVICE_LED1_ON:
-		ret = set_blue_led_on();
-		break;
-	case MSG_DEVICE_LED1_OFF:
-		ret = set_blue_led_off();
-		break;
-	case MSG_DEVICE_LED2_ON:
-		ret = set_orange_led_on();
-		break;
-	case MSG_DEVICE_LED2_OFF:
-		ret = set_orange_led_off();
 		break;
 	}
 	msg_free(&msg);
@@ -438,17 +442,6 @@ static int server_setup(void)
 	rts_set_log_mask(RTS_LOG_MASK_CONS);
 	init_part_info();
 	init_led_gpio();
-
-	device_iot_config_t *tmp = malloc(sizeof(device_iot_config_t));
-	memset(tmp, 0, sizeof(device_iot_config_t));
-
-	//iot_get_part_info(&tmp);
-	//iot_ctrl_amplifier((void *)tmp);
-	//iot_get_part_user_info(tmp);
-
-
-	free(tmp);
-
 	server_set_status(STATUS_TYPE_STATUS, STATUS_IDLE);
 	return ret;
 }

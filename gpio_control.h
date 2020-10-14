@@ -32,5 +32,7 @@ int set_blue_led_off();
 int set_orange_led_on();
 int set_orange_led_off();
 int ctl_spk_enable(int on_off);
+int ctl_ircut(int on_off);
+int ctl_irled(int on_off);
 
 #endif /* GPIO_CONTRIL_H_ */
