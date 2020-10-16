@@ -30,6 +30,7 @@
 #include "audio_control_interface.h"
 #include "part_control_interface.h"
 #include "gpio_control_interface.h"
+#include "motor_control_interface.h"
 /*
  * static
  */
@@ -67,11 +68,22 @@ static int iot_adjust_volume(void* arg);
 static int iot_ctrl_led(void* arg);
 static int iot_ctrl_amplifier(void* arg);
 static int iot_ctrl_ircut(void* arg);
+static int iot_ctrl_irled(void* arg);
+static int iot_ctrl_motor(int x_y, int dir);
 /*
  * %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
  * %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
  * %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
  */
+static int iot_ctrl_motor(int x_y, int dir)
+{
+	int ret;
+
+	ret = control_motor(x_y, dir, SPEED_NORMAL);
+
+	return ret;
+}
+
 static int iot_ctrl_irled(void* arg)
 {
 	device_iot_config_t *tmp = NULL;
@@ -289,9 +301,11 @@ static void server_thread_termination(void)
 	message_t msg;
 	memset(&msg, 0, sizeof(message_t));
 	msg.message = MSG_DEVICE_SIGINT;
-	manager_message(&msg);
 
 	uninit_led_gpio();
+	motor_release();
+
+	manager_message(&msg);
 }
 
 static int server_release(void)
@@ -409,7 +423,23 @@ static int server_message_proc(void)
 			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
 					NULL, 0);
 		} else if( msg.arg_in.cat == DEVICE_CTRL_IR_MODE ) {
-			//ret = iot_ctrl_irct(msg.arg);
+			ret = iot_ctrl_irled(msg.arg);
+			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
+					NULL, 0);
+		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_HOR_LEFT ) {
+			ret = iot_ctrl_motor(MOTOR_X, DIR_LEFT);
+			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
+					NULL, 0);
+		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_HOR_RIGHT ) {
+			ret = iot_ctrl_motor(MOTOR_X, DIR_RIGHT);
+			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
+					NULL, 0);
+		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_VER_DOWN ) {
+			ret = iot_ctrl_motor(MOTOR_Y, DIR_DOWN);
+			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
+					NULL, 0);
+		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_VER_UP ) {
+			ret = iot_ctrl_motor(MOTOR_Y, DIR_UP);
 			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
 					NULL, 0);
 		}
@@ -440,9 +470,35 @@ static int server_setup(void)
 {
 	int ret = 0;
 	rts_set_log_mask(RTS_LOG_MASK_CONS);
-	init_part_info();
-	init_led_gpio();
+	ret = init_part_info();
+	if(ret)
+	{
+		log_err("init_part_info init failed");
+		ret = -1;
+		goto err;
+	}
+
+	ret = init_led_gpio();
+	if(ret)
+	{
+		log_err("init_led_gpio init failed");
+		ret = -1;
+		goto err;
+	}
+
+	ret = init_motor();
+	if(ret)
+	{
+		log_err("init_motor init failed");
+		ret = -1;
+		goto err;
+	}
+
 	server_set_status(STATUS_TYPE_STATUS, STATUS_IDLE);
+	return ret;
+
+err:
+	server_set_status(STATUS_TYPE_STATUS, STATUS_ERROR);
 	return ret;
 }
 
@@ -479,6 +535,7 @@ static int server_restart(void)
 {
 	int ret = 0;
 	uninit_led_gpio();
+	motor_release();
 	return ret;
 }
 
@@ -487,6 +544,7 @@ static int server_error(void)
 	int ret = 0;
 	uninit_led_gpio();
 	server_release();
+	motor_release();
 	return ret;
 }
 

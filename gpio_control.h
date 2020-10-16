@@ -34,5 +34,6 @@ int set_orange_led_off();
 int ctl_spk_enable(int on_off);
 int ctl_ircut(int on_off);
 int ctl_irled(int on_off);
+int ctl_motor595_enable(int on_off);
 
 #endif /* GPIO_CONTRIL_H_ */

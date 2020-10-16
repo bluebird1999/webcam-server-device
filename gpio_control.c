@@ -26,6 +26,7 @@
 #define IRCUR_AIN				16
 #define IRCUR_BIN				17
 #define IRLED					6
+#define MOTOR_595ENABLE			0
 
 //static
 static struct rts_gpio *rts_gpio_led1 			= NULL;
@@ -34,6 +35,7 @@ static struct rts_gpio *rts_gpio_spk  			= NULL;
 static struct rts_gpio *rts_gpio_ircutain  		= NULL;
 static struct rts_gpio *rts_gpio_ircutbin  		= NULL;
 static struct rts_gpio *rts_gpio_irled		  	= NULL;
+static struct rts_gpio *rts_gpio_motorable		= NULL;
 
 static int set_gpio_value(struct rts_gpio *rts_gpio, int value);
 
@@ -78,6 +80,13 @@ int ctl_irled(int on_off)
 	//1 -> disable
 	//0 -> enable
 	return set_gpio_value(rts_gpio_irled, !on_off);
+}
+
+int ctl_motor595_enable(int on_off)
+{
+	//1 -> disable
+	//0 -> enable
+	return set_gpio_value(rts_gpio_motorable, !on_off);
 }
 
 int ctl_spk_enable(int on_off)
@@ -196,6 +205,22 @@ int init_led_gpio()
 		rts_io_gpio_free(rts_gpio_irled);
 		return -1;
 	}
+
+	//motor_enable
+	rts_gpio_motorable = rts_io_gpio_request(DOMAIN_GPIO_SYSTEM, MOTOR_595ENABLE);
+	if(!rts_gpio_motorable)
+	{
+		log_err("can not requset gpio num %d\n", MOTOR_595ENABLE);
+		return -1;
+	}
+
+	if(rts_io_gpio_set_direction(rts_gpio_motorable, GPIO_OUTPUT))
+	{
+		log_err("can not set gpio %d dir\n", MOTOR_595ENABLE);
+		rts_io_gpio_free(rts_gpio_motorable);
+		return -1;
+	}
+
 	return 0;
 }
 
@@ -207,6 +232,7 @@ int uninit_led_gpio()
 	rts_io_gpio_free(rts_gpio_ircutain);
 	rts_io_gpio_free(rts_gpio_ircutbin);
 	rts_io_gpio_free(rts_gpio_irled);
+	rts_io_gpio_free(rts_gpio_motorable);
 
 	return 0;
 }

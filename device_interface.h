@@ -18,18 +18,19 @@
  */
 
 //control
-//#define		MSG_DEVICE_WIFI						MSG_DEVICE_BASE | 0x0003
-//#define		MSG_DEVICE_GET_WIFISTATUS			MSG_DEVICE_BASE | 0x0004
-//#define		MSG_DEVICE_GET_WIFISTATUS_ACK		MSG_DEVICE_BASE | 0x1004
 #define		DEVICE_CTRL_SD_INFO					0x0001
 #define		DEVICE_CTRL_LED						0x0003
 #define		DEVICE_CTRL_AMPLIFIER				0x0009
 #define		DEVICE_CTRL_ADJUST_AUDIO_VOLUME		0x000a
-//#define		MSG_DEVICE_MOTOR					MSG_DEVICE_BASE | 0x000b
 #define		DEVICE_CTRL_PART_INFO				0x000c
 #define		DEVICE_CTRL_PART_USER_INFO			0x000d
 #define		DEVICE_CTRL_IR_SWITCH				0x0007
 #define		DEVICE_CTRL_IR_MODE					0x0008
+#define  	DEVICE_CTRL_MOTOR_HOR_RIGHT			0x000b
+#define  	DEVICE_CTRL_MOTOR_HOR_LEFT			0x000f
+#define 	DEVICE_CTRL_MOTOR_VER_UP			0x0011
+#define 	DEVICE_CTRL_MOTOR_VER_DOWN			0x0012
+#define 	DEVICE_CTRL_MOTOR_RESET				0x0012
 
 #define		DEVICE_ACTION_USER_FORMAT			0x000e
 #define		DEVICE_ACTION_SD_FORMAT				0x0002
@@ -60,13 +61,13 @@
  * volume: -1 -> no volume, control by event
  * 		   >=0 -> set volume (range 0 ~ 100)
  */
-//audio	------------------------------------------------------------
+//audio		------------------------------------------------------------
 typedef struct audio_info_t {
 	unsigned int 	type;
 	unsigned int	volume;
 } audio_info_t;
 
-//sd	------------------------------------------------------------
+//sd		------------------------------------------------------------
 typedef struct sd_info_ack_t {
 	unsigned long	plug;
 	unsigned long	totalBytes;
@@ -74,7 +75,7 @@ typedef struct sd_info_ack_t {
 	unsigned long	freeBytes;
 } sd_info_ack_t;
 
-//part 	------------------------------------------------------------
+//part 		------------------------------------------------------------
 typedef struct part_info
 {
     char name[16];
