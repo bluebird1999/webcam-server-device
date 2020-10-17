@@ -600,7 +600,7 @@ static void *server_func(void)
 //		usleep(100);//100ms
 	}
 	server_release();
-	log_info("-----------thread exit: server_realtek-----------");
+	log_info("-----------thread exit: server_device-----------");
 	message_t msg;
     /********message body********/
 	msg_init(&msg);
@@ -623,7 +623,7 @@ int server_device_start(void)
 	pthread_rwlock_init(&info.lock, NULL);
 	ret = pthread_create(&info.id, NULL, server_func, NULL);
 	if(ret != 0) {
-		log_err("realtek server create error! ret = %d",ret);
+		log_err("device server create error! ret = %d",ret);
 		 return ret;
 	 }
 	else {
@@ -636,7 +636,7 @@ int server_device_message(message_t *msg)
 {
 	int ret=0;
 	if( server_get_status(STATUS_TYPE_STATUS)!= STATUS_RUN ) {
-		log_err("realtek server is not ready!");
+		log_err("device server is not ready!");
 		return -1;
 	}
 	ret = pthread_rwlock_wrlock(&message.lock);
@@ -646,7 +646,7 @@ int server_device_message(message_t *msg)
 	}
 	ret = msg_buffer_push(&message, msg);
 	if( ret!=0 )
-		log_err("message push in realtek error =%d", ret);
+		log_err("message push in device error =%d", ret);
 	ret = pthread_rwlock_unlock(&message.lock);
 	if (ret)
 		log_err("add message unlock fail, ret = %d\n", ret);
