@@ -66,6 +66,7 @@ typedef struct ptzctrl_info {
  */
 int init_motor();
 int control_motor(int x_y, int dir, int speed);
+int motor_reset();
 void motor_release();
 
 #endif /* MOTOR_CONTRIL_H_ */

@@ -70,11 +70,21 @@ static int iot_ctrl_amplifier(void* arg);
 static int iot_ctrl_ircut(void* arg);
 static int iot_ctrl_irled(void* arg);
 static int iot_ctrl_motor(int x_y, int dir);
+static int iot_ctrl_motor_reset();
 /*
  * %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
  * %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
  * %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
  */
+static int iot_ctrl_motor_reset()
+{
+	int ret;
+
+	ret = motor_reset();
+
+	return ret;
+}
+
 static int iot_ctrl_motor(int x_y, int dir)
 {
 	int ret;
@@ -355,7 +365,6 @@ static int server_message_proc(void)
 	int ret = 0, ret1 = 0;
 	message_t msg;
 	message_t send_msg;
-	//message_arg_t rd;
 	device_iot_config_t tmp;
 	msg_init(&msg);
 	msg_init(&send_msg);
@@ -440,6 +449,10 @@ static int server_message_proc(void)
 					NULL, 0);
 		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_VER_UP ) {
 			ret = iot_ctrl_motor(MOTOR_Y, DIR_UP);
+			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
+					NULL, 0);
+		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_RESET ) {
+			ret = iot_ctrl_motor_reset();
 			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
 					NULL, 0);
 		}

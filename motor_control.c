@@ -22,6 +22,16 @@ static unsigned int x_cur_step = 0;
 static unsigned int y_cur_step = 0;
 static ptzctrl_info_t ptz_info;
 
+int motor_reset()
+{
+	int ret = 0;
+	//need time, must wait dirver finish
+	ioctl(fd, RTS_PTZ_IOC_RESET, NULL);
+	sleep(5);
+
+	return ret;
+}
+
 int init_motor()
 {
 	int ret = 0;
