@@ -314,6 +314,7 @@ static int send_message(int receiver, message_t *msg)
 		st = server_audio_message(msg);
 		break;
 	case SERVER_RECORDER:
+		st = server_recorder_message(msg);
 		break;
 	case SERVER_PLAYER:
 		break;
