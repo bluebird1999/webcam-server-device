@@ -57,7 +57,7 @@ int ctl_ircut(int on_off)
 			log_err("set gpio %d failed\n",IRCUR_BIN);
 			return -1;
 		}
-	} else {
+	} else if(on_off == 0){
 		ret = set_gpio_value(rts_gpio_ircutbin, LED_ON);
 		if(ret)
 		{
@@ -79,6 +79,8 @@ int ctl_irled(int on_off)
 {
 	//1 -> disable
 	//0 -> enable
+	if(on_off != 0 || on_off != 1)
+		return -1;
 	return set_gpio_value(rts_gpio_irled, !on_off);
 }
 
@@ -86,11 +88,15 @@ int ctl_motor595_enable(int on_off)
 {
 	//1 -> disable
 	//0 -> enable
+	if(on_off != 0 || on_off != 1)
+		return -1;
 	return set_gpio_value(rts_gpio_motorable, !on_off);
 }
 
 int ctl_spk_enable(int on_off)
 {
+	if(on_off != 0 || on_off != 1)
+		return -1;
 	return set_gpio_value(rts_gpio_spk, on_off);
 }
 

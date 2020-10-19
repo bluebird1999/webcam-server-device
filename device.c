@@ -38,9 +38,6 @@
 static server_info_t 		info;
 static message_buffer_t		message;
 
-//static unsigned int wifi_status;
-//static unsigned int irled_status;
-//static unsigned int ircut_status;
 //function
 //common
 static void *server_func(void);
@@ -119,7 +116,7 @@ static int iot_ctrl_ircut(void* arg)
 
 	tmp = (device_iot_config_t *)arg;
 
-	ret = ctl_ircut(tmp->ircut_inoff);
+	ret = ctl_ircut(tmp->ircut_onoff);
 
 	return ret;
 }
@@ -134,7 +131,7 @@ static int iot_ctrl_amplifier(void* arg)
 
 	tmp = (device_iot_config_t *)arg;
 
-	ret = ctl_spk(&tmp->on_off);
+	ret = ctl_spk(&tmp->amp_on_off);
 
 	return ret;
 }
@@ -171,13 +168,37 @@ static int iot_adjust_volume(void* arg)
 	if(arg == NULL)
 		return -1;
 
-	memset(&ctrl_audio, 0, sizeof(ctrl_audio));
-
 	tmp = (device_iot_config_t *)arg;
+
+	//check the parameters
+	if(tmp->audio_iot_info.in_out != 1 || tmp->audio_iot_info.in_out != 0)
+	{
+		ret = -1;
+		goto err;
+	}
+	if(tmp->audio_iot_info.type > 4 || tmp->audio_iot_info.type < 0)
+	{
+		ret = -1;
+		goto err;
+	}
+	if(tmp->audio_iot_info.volume < -1 || tmp->audio_iot_info.volume > 100)
+	{
+		ret = -1;
+		goto err;
+	}
+
+	memset(&ctrl_audio, 0, sizeof(ctrl_audio));
 	ctrl_audio.type = tmp->audio_iot_info.type;
 	ctrl_audio.volume = tmp->audio_iot_info.volume;
 
-	ret = adjust_audio_volume(&ctrl_audio);
+	if(tmp->audio_iot_info.in_out == VOLUME_SPEAKER)
+		ret = adjust_audio_volume(&ctrl_audio);
+	else if(tmp->audio_iot_info.in_out == VOLUME_MIC)
+		ret = adjust_input_audio_volume(&ctrl_audio);
+
+	return ret;
+err:
+	log_err("invalid parameters\n");
 	return ret;
 }
 

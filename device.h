@@ -16,6 +16,8 @@
 /*
  * define
  */
+#define VOLUME_MIC		0
+#define VOLUME_SPEAKER	1
 
 /*
  * structure

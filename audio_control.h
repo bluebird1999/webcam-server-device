@@ -37,6 +37,7 @@ typedef struct audio_info_t_m {
  */
 
 int adjust_audio_volume(audio_info_t_m *para);
+int adjust_input_audio_volume(audio_info_t_m *para);
 int ctl_spk(int *para);
 
 #endif /* AUDIO_CONTRIL_H_ */

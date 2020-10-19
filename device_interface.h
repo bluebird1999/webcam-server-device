@@ -53,16 +53,21 @@
 /* if type  > 0,  volume must be -1;
  * if volume > 0,  event must be 0;
  *
+ * int_out : control mic volume or speaker volume
+ * 			 0 -> mic
+ * 			 1 -> speaker
+ *
  * type:  0 -> no event, control by volume
  * 		  1 -> volume up
  * 		  2 -> volume down
  * 		  3 -> voulme mute
  * 		  4 -> volume unmute
  * volume: -1 -> no volume, control by event
- * 		   >=0 -> set volume (range 0 ~ 100)
+ * 		   >= 0 && <= 100 -> set volume (range 0 ~ 100)
  */
 //audio		------------------------------------------------------------
 typedef struct audio_info_t {
+	unsigned int 	in_out;
 	unsigned int 	type;
 	unsigned int	volume;
 } audio_info_t;
@@ -91,10 +96,10 @@ typedef struct part_msg_info
 //iot struct ------------------------------------------------------------
 typedef struct device_iot_config_t {
 	int ir_mode;
-	int ircut_inoff;
+	int ircut_onoff;
 	int led1_onoff;
 	int led2_onoff;
-	int on_off;
+	int amp_on_off;
 	sd_info_ack_t 		sd_iot_info;
 	sd_info_ack_t 		user_part_iot_info;
 	audio_info_t 		audio_iot_info;
