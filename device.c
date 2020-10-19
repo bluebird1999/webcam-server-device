@@ -294,7 +294,7 @@ static int send_message(int receiver, message_t *msg)
 	int st;
 	switch(receiver) {
 	case SERVER_CONFIG:
-		st = server_config_message(msg);
+//		st = server_config_message(msg);
 		break;
 	case SERVER_DEVICE:
 		break;
