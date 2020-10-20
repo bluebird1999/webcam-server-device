@@ -140,12 +140,12 @@ int adjust_audio_volume(audio_info_t_m *para)
 
 	audio_control_info = para;
 
-	log_info("volume = %d",audio_control_info->volume);
+	//log_info("volume = %d",audio_control_info->volume);
 	if ((audio_control_info->volume < 100 && audio_control_info->volume > 0) || audio_control_info->volume == -1)
 	{
 
-		log_info("type = %d",audio_control_info->type);
-		log_info("volume = %d",audio_control_info->volume);
+		//log_info("type = %d",audio_control_info->type);
+		//log_info("volume = %d",audio_control_info->volume);
 
 		ret = rts_audio_get_playback_volume(&value_cur);
 		if (ret) {

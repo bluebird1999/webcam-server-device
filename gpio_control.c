@@ -232,13 +232,20 @@ int init_led_gpio()
 
 int uninit_led_gpio()
 {
-	rts_io_gpio_free(rts_gpio_led1);
-	rts_io_gpio_free(rts_gpio_led2);
-	rts_io_gpio_free(rts_gpio_spk);
-	rts_io_gpio_free(rts_gpio_ircutain);
-	rts_io_gpio_free(rts_gpio_ircutbin);
-	rts_io_gpio_free(rts_gpio_irled);
-	rts_io_gpio_free(rts_gpio_motorable);
+	if(rts_gpio_led1)
+		rts_io_gpio_free(rts_gpio_led1);
+	if(rts_gpio_led2)
+		rts_io_gpio_free(rts_gpio_led2);
+	if(rts_gpio_spk)
+		rts_io_gpio_free(rts_gpio_spk);
+	if(rts_gpio_ircutain)
+		rts_io_gpio_free(rts_gpio_ircutain);
+	if(rts_gpio_ircutbin)
+		rts_io_gpio_free(rts_gpio_ircutbin);
+	if(rts_gpio_irled)
+		rts_io_gpio_free(rts_gpio_irled);
+	if(rts_gpio_motorable)
+		rts_io_gpio_free(rts_gpio_motorable);
 
 	return 0;
 }

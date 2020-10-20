@@ -22,11 +22,11 @@
 /*
  * structure
  */
-typedef struct audio_curinfo_t {
-    unsigned int    volume;
-    unsigned int    mute;
-} aduio_curinfo_t;
-
+typedef struct server_name
+{
+	int index;
+	char name[64];
+}server_name_t;
 
 /*
  * function

@@ -16,7 +16,7 @@
 /*
  * define
  */
-#define		SERVER_DEVICE_VERSION_STRING		"alpha-3.2.2"
+#define		SERVER_DEVICE_VERSION_STRING		"alpha-3.4"
 
 //control
 #define		DEVICE_CTRL_SD_INFO					0x0001
@@ -31,6 +31,7 @@
 #define  	DEVICE_CTRL_MOTOR_HOR_LEFT			0x000f
 #define 	DEVICE_CTRL_MOTOR_VER_UP			0x0011
 #define 	DEVICE_CTRL_MOTOR_VER_DOWN			0x0012
+//need times, about 48s
 #define 	DEVICE_CTRL_MOTOR_RESET				0x0013
 
 #define		DEVICE_ACTION_USER_FORMAT			0x000e
@@ -52,7 +53,7 @@
  * structure
  */
 /* if type  > 0,  volume must be -1;
- * if volume > 0,  event must be 0;
+ * if volume >= 0,  event must be 0;
  *
  * int_out : control mic volume or speaker volume
  * 			 0 -> mic
@@ -70,7 +71,7 @@
 typedef struct audio_info_t {
 	unsigned int 	in_out;
 	unsigned int 	type;
-	unsigned int	volume;
+			 int	volume;
 } audio_info_t;
 
 //sd		------------------------------------------------------------
@@ -110,6 +111,7 @@ typedef struct device_iot_config_t {
 /*
  * function
  */
+//need times, about 50s
 int server_device_start(void);
 int server_device_message(message_t *msg);
 

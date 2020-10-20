@@ -135,5 +135,6 @@ int control_motor(int x_y, int dir, int speed)
 
 void motor_release()
 {
-	close(fd);
+	if(fd)
+		close(fd);
 }

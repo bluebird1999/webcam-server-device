@@ -39,7 +39,21 @@
 //variable
 static server_info_t 		info;
 static message_buffer_t		message;
-
+static server_name_t server_name_tt[] = {
+		{0, "config"},
+		{1, "device"},
+		{2, "kernel"},
+		{3, "realtek"},
+		{4, "miio"},
+		{5, "miss"},
+		{6, "micloud"},
+		{7, "video"},
+		{8, "audio"},
+		{9, "recorder"},
+		{10, "player"},
+		{11, "speaker"},
+		{32, "manager"},
+};
 //function
 //common
 static void *server_func(void);
@@ -71,6 +85,7 @@ static int iot_ctrl_ircut(void* arg);
 static int iot_ctrl_irled(void* arg);
 static int iot_ctrl_motor(int x_y, int dir);
 static int iot_ctrl_motor_reset();
+static char* get_string_name(int i);
 /*
  * %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
  * %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -174,18 +189,21 @@ static int iot_adjust_volume(void* arg)
 	tmp = (device_iot_config_t *)arg;
 
 	//check the parameters
-	if(tmp->audio_iot_info.in_out != 1 || tmp->audio_iot_info.in_out != 0)
+	if(tmp->audio_iot_info.in_out != 1 && tmp->audio_iot_info.in_out != 0)
 	{
+		log_err("in_out parameters error");
 		ret = -1;
 		goto err;
 	}
 	if(tmp->audio_iot_info.type > 4 || tmp->audio_iot_info.type < 0)
 	{
+		log_err("type parameters error");
 		ret = -1;
 		goto err;
 	}
 	if(tmp->audio_iot_info.volume < -1 || tmp->audio_iot_info.volume > 100)
 	{
+		log_err("volume parameters error");
 		ret = -1;
 		goto err;
 	}
@@ -647,6 +665,8 @@ static void *server_func(void)
 		heart_beat_proc();
 	}
 	server_release();
+	uninit_led_gpio();
+	motor_release();
 	log_info("-----------thread exit: server_device-----------");
 	message_t msg;
     /********message body********/
@@ -679,6 +699,18 @@ int server_device_start(void)
 	}
 }
 
+static char* get_string_name(int i)
+{
+	char *ret = NULL;
+
+	if(i == SERVER_MANAGER)
+		ret = server_name_tt[sizeof(server_name_tt)/sizeof(server_name_t) - 1].name;
+	else
+		ret = server_name_tt[i].name;
+
+	return ret;
+}
+
 int server_device_message(message_t *msg)
 {
 	int ret=0;
@@ -692,6 +724,7 @@ int server_device_message(message_t *msg)
 		return ret;
 	}
 	ret = msg_buffer_push(&message, msg);
+	log_info("push into the device message queue: sender=%s, message=%d, ret=%d", get_string_name(msg->sender), msg->message, ret);
 	if( ret!=0 )
 		log_err("message push in device error =%d", ret);
 	ret = pthread_rwlock_unlock(&message.lock);
