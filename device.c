@@ -16,6 +16,7 @@
 #include <rtscamkit.h>
 #include <rtsavapi.h>
 #include <rtsvideo.h>
+//#include <dmalloc.h>
 //program header
 #include "../../tools/tools_interface.h"
 #include "../../manager/manager_interface.h"
@@ -23,6 +24,7 @@
 #include "../../server/video/video_interface.h"
 #include "../../server/miio/miio_interface.h"
 #include "../../server/miss/miss_interface.h"
+#include "../../server/recorder/recorder_interface.h"
 //server header
 #include "device.h"
 #include "device_interface.h"
@@ -52,6 +54,7 @@ static int server_stop(void);
 static int server_restart(void);
 static int server_error(void);
 static int server_release(void);
+static int heart_beat_proc(void);
 static int server_get_status(int type);
 static int server_set_status(int type, int st);
 static void server_thread_termination(void);
@@ -583,6 +586,27 @@ static int server_error(void)
 	return ret;
 }
 
+static int heart_beat_proc(void)
+{
+	int ret = 0;
+	message_t msg;
+	long long int tick = 0;
+	tick = time_get_now_stamp();
+	if( (tick - info.tick) > 10 ) {
+		info.tick = tick;
+	    /********message body********/
+		msg_init(&msg);
+		msg.message = MSG_MANAGER_HEARTBEAT;
+		msg.sender = msg.receiver = SERVER_DEVICE;
+		msg.arg_in.cat = info.status;
+		msg.arg_in.dog = info.thread_start;
+		ret = manager_message(&msg);
+		/***************************/
+	}
+	return ret;
+}
+
+
 static void *server_func(void)
 {
     signal(SIGINT, server_thread_termination);
@@ -620,6 +644,7 @@ static void *server_func(void)
 			break;
 		}
 //		usleep(100);//100ms
+		heart_beat_proc();
 	}
 	server_release();
 	log_info("-----------thread exit: server_device-----------");
