@@ -16,7 +16,7 @@
 /*
  * define
  */
-#define		SERVER_DEVICE_VERSION_STRING		"alpha-3.4"
+#define		SERVER_DEVICE_VERSION_STRING		"alpha-3.5"
 
 //control
 #define		DEVICE_CTRL_SD_INFO					0x0001
@@ -111,7 +111,6 @@ typedef struct device_iot_config_t {
 /*
  * function
  */
-//need times, about 50s
 int server_device_start(void);
 int server_device_message(message_t *msg);
 

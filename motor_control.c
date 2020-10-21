@@ -21,6 +21,7 @@ static int fd = 0;
 static unsigned int x_cur_step = 0;
 static unsigned int y_cur_step = 0;
 static ptzctrl_info_t ptz_info;
+static int motor_ready = 0;
 
 int motor_reset()
 {
@@ -50,7 +51,7 @@ int init_motor()
 	}
 
 	//reset
-	//need time
+	//need time, about 48s
 	ioctl(fd, RTS_PTZ_IOC_RESET, NULL);
 	//sleep(15);
 
@@ -72,6 +73,7 @@ int init_motor()
 
 	x_cur_step = ptz_info.xmotor_info.pos;
 	y_cur_step = ptz_info.ymotor_info.pos;
+	motor_ready = 1;
 
 	return ret;
 err:
@@ -83,6 +85,11 @@ err:
 
 int control_motor(int x_y, int dir, int speed)
 {
+	if(motor_ready != 1)
+	{
+		log_err("motor not ready");
+		return -1;
+	}
 
 	if(x_cur_step + MOTOR_STEP >= ptz_info.xmotor_info.max_steps ||
 			x_cur_step - MOTOR_STEP <= 0)
@@ -135,6 +142,8 @@ int control_motor(int x_y, int dir, int speed)
 
 void motor_release()
 {
+	motor_ready = 0;
+
 	if(fd)
 		close(fd);
 }

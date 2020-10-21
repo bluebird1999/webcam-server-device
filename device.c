@@ -85,6 +85,7 @@ static int iot_ctrl_ircut(void* arg);
 static int iot_ctrl_irled(void* arg);
 static int iot_ctrl_motor(int x_y, int dir);
 static int iot_ctrl_motor_reset();
+static void *motor_init_func(void *arg);
 static char* get_string_name(int i);
 /*
  * %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -363,6 +364,8 @@ static void server_thread_termination(void)
 
 static int server_release(void)
 {
+	uninit_led_gpio();
+	motor_release();
 	return 0;
 }
 
@@ -522,9 +525,28 @@ static int server_wait(void)
 	return ret;
 }
 
+static void *motor_init_func(void *arg)
+{
+	int ret = 0;
+
+    signal(SIGINT, server_thread_termination);
+    signal(SIGTERM, server_thread_termination);
+	misc_set_thread_name("motor_init_poll");
+    pthread_detach(pthread_self());
+
+	ret = init_motor();
+	if(ret)
+	{
+		log_err("init_motor init failed");
+	}
+
+	pthread_exit(0);
+}
+
 static int server_setup(void)
 {
 	int ret = 0;
+	pthread_t motor_tid;
 	rts_set_log_mask(RTS_LOG_MASK_CONS);
 	ret = init_part_info();
 	if(ret)
@@ -542,13 +564,11 @@ static int server_setup(void)
 		goto err;
 	}
 
-	ret = init_motor();
-	if(ret)
-	{
-		log_err("init_motor init failed");
+    if ((ret = pthread_create(&motor_tid, NULL, motor_init_func, NULL))) {
+    	log_err("create motor init thread failed, ret=%d\n", ret);
 		ret = -1;
 		goto err;
-	}
+    }
 
 	server_set_status(STATUS_TYPE_STATUS, STATUS_IDLE);
 	return ret;
@@ -583,24 +603,21 @@ static int server_run(void)
 static int server_stop(void)
 {
 	int ret = 0;
-	uninit_led_gpio();
 	return ret;
 }
 
 static int server_restart(void)
 {
 	int ret = 0;
-	uninit_led_gpio();
-	motor_release();
+	server_release();
+	server_set_status(STATUS_TYPE_STATUS, STATUS_NONE);
 	return ret;
 }
 
 static int server_error(void)
 {
 	int ret = 0;
-	uninit_led_gpio();
 	server_release();
-	motor_release();
 	return ret;
 }
 
@@ -665,8 +682,6 @@ static void *server_func(void)
 		heart_beat_proc();
 	}
 	server_release();
-	uninit_led_gpio();
-	motor_release();
 	log_info("-----------thread exit: server_device-----------");
 	message_t msg;
     /********message body********/
@@ -692,7 +707,7 @@ int server_device_start(void)
 	if(ret != 0) {
 		log_err("device server create error! ret = %d",ret);
 		 return ret;
-	 }
+	}
 	else {
 		log_err("device server create successful!");
 		return 0;
@@ -714,6 +729,7 @@ static char* get_string_name(int i)
 int server_device_message(message_t *msg)
 {
 	int ret=0;
+
 	if( server_get_status(STATUS_TYPE_STATUS)!= STATUS_RUN ) {
 		log_err("device server is not ready!");
 		return -1;
