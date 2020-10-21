@@ -39,5 +39,6 @@ typedef struct space_info_t {
 int get_sd_info(void **para);
 //int get_storage_info(char * mountpoint, space_info_t *sd_info);
 int format_sd();
+int umount_sd();
 
 #endif /* SD_CONTRIL_H_ */

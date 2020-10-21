@@ -73,6 +73,35 @@ int get_sd_info(void **para)
     return 0;
 }
 
+int umount_sd()
+{
+	int plug;
+	int ret;
+    char *block_path = NULL;
+    char *mountpath = NULL;
+    block_path = malloc(SIZE);
+    mountpath = malloc(SIZE);
+
+	plug = get_sd_plug_status();
+
+	if(plug == 1)
+	{
+		ret = get_sd_block_mountpath(block_path, mountpath);
+		if(ret)
+		{
+			log_err("get_sd_block_mountpath prase failed\n");
+			return -1;
+		}
+
+		if(mountpath != NULL)
+		{
+			ret = umount(mountpath);
+		}
+	}
+
+	return ret;
+}
+
 static int get_sd_plug_status()
 {
     FILE *fp = NULL;

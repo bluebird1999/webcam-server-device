@@ -85,6 +85,7 @@ static int iot_ctrl_ircut(void* arg);
 static int iot_ctrl_irled(void* arg);
 static int iot_ctrl_motor(int x_y, int dir);
 static int iot_ctrl_motor_reset();
+static int iot_umount_sd();
 static void *motor_init_func(void *arg);
 static char* get_string_name(int i);
 /*
@@ -136,6 +137,17 @@ static int iot_ctrl_ircut(void* arg)
 	tmp = (device_iot_config_t *)arg;
 
 	ret = ctl_ircut(tmp->ircut_onoff);
+
+	return ret;
+}
+
+static int iot_umount_sd()
+{
+	int ret;
+
+	log_err("ljx --- iot_umount_sd");
+
+	ret = umount_sd();
 
 	return ret;
 }
@@ -463,6 +475,10 @@ static int server_message_proc(void)
 	case MSG_DEVICE_CTRL_DIRECT:
 		if( msg.arg_in.cat == DEVICE_CTRL_AMPLIFIER ) {
 			ret = iot_ctrl_amplifier(msg.arg);
+			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
+					NULL, 0);
+		} else if( msg.arg_in.cat == DEVICE_CTRL_SD_UMOUNT ) {
+			ret = iot_umount_sd();
 			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
 					NULL, 0);
 		} else if( msg.arg_in.cat == DEVICE_CTRL_ADJUST_AUDIO_VOLUME ) {
