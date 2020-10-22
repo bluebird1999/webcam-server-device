@@ -81,8 +81,7 @@ static int iot_get_part_info(device_iot_config_t *tmp);
 static int iot_adjust_volume(void* arg);
 static int iot_ctrl_led(void* arg);
 static int iot_ctrl_amplifier(void* arg);
-static int iot_ctrl_ircut(void* arg);
-static int iot_ctrl_irled(void* arg);
+static int iot_ctrl_day_night(void* arg);
 static int iot_ctrl_motor(int x_y, int dir);
 static int iot_ctrl_motor_reset();
 static int iot_umount_sd();
@@ -111,7 +110,7 @@ static int iot_ctrl_motor(int x_y, int dir)
 	return ret;
 }
 
-static int iot_ctrl_irled(void* arg)
+static int iot_ctrl_day_night(void* arg)
 {
 	device_iot_config_t *tmp = NULL;
 	int ret;
@@ -121,22 +120,20 @@ static int iot_ctrl_irled(void* arg)
 
 	tmp = (device_iot_config_t *)arg;
 
-	ret = ctl_irled(tmp->ir_mode);
-
-	return ret;
-}
-
-static int iot_ctrl_ircut(void* arg)
-{
-	device_iot_config_t *tmp = NULL;
-	int ret;
-
-	if(arg == NULL)
-		return -1;
-
-	tmp = (device_iot_config_t *)arg;
-
-	ret = ctl_ircut(tmp->ircut_onoff);
+	if(tmp->day_night_mode == DAY_NIGHT_AUTO)
+	{
+		//add
+	}
+	else if (tmp->day_night_mode == DAY_NIGHT_OFF)
+	{
+		ret = ctl_ircut(GPIO_ON);
+		ret |= ctl_irled(GPIO_OFF);
+	}
+	else if (tmp->day_night_mode == DAY_NIGHT_ON)
+	{
+		ret = ctl_ircut(GPIO_OFF);
+		ret |= ctl_irled(GPIO_ON);
+	}
 
 	return ret;
 }
@@ -489,12 +486,8 @@ static int server_message_proc(void)
 			ret = iot_ctrl_led(msg.arg);
 			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
 					NULL, 0);
-		} else if( msg.arg_in.cat == DEVICE_CTRL_IR_SWITCH ) {
-			ret = iot_ctrl_ircut(msg.arg);
-			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
-					NULL, 0);
-		} else if( msg.arg_in.cat == DEVICE_CTRL_IR_MODE ) {
-			ret = iot_ctrl_irled(msg.arg);
+		} else if( msg.arg_in.cat == DEVICE_CTRL_DAY_NIGHT_MODE ) {
+			ret = iot_ctrl_day_night(msg.arg);
 			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
 					NULL, 0);
 		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_HOR_LEFT ) {

@@ -16,7 +16,7 @@
 /*
  * define
  */
-#define		SERVER_DEVICE_VERSION_STRING		"alpha-3.6"
+#define		SERVER_DEVICE_VERSION_STRING		"alpha-3.7"
 
 //control
 #define		DEVICE_CTRL_SD_INFO					0x0001
@@ -26,8 +26,7 @@
 #define		DEVICE_CTRL_ADJUST_AUDIO_VOLUME		0x000a
 #define		DEVICE_CTRL_PART_INFO				0x000c
 #define		DEVICE_CTRL_PART_USER_INFO			0x000d
-#define		DEVICE_CTRL_IR_SWITCH				0x0007
-#define		DEVICE_CTRL_IR_MODE					0x0008
+#define 	DEVICE_CTRL_DAY_NIGHT_MODE			0x0008
 #define  	DEVICE_CTRL_MOTOR_HOR_RIGHT			0x000b
 #define  	DEVICE_CTRL_MOTOR_HOR_LEFT			0x000f
 #define 	DEVICE_CTRL_MOTOR_VER_UP			0x0011
@@ -49,6 +48,10 @@
 #define		MSG_DEVICE_ACTION_ACK				MSG_DEVICE_BASE | 0x1020
 #define		MSG_DEVICE_CTRL_DIRECT				MSG_DEVICE_BASE | 0x0012
 #define		MSG_DEVICE_CTRL_DIRECT_ACK			MSG_DEVICE_BASE | 0x1012
+
+#define 	DAY_NIGHT_AUTO						0
+#define 	DAY_NIGHT_OFF						1
+#define 	DAY_NIGHT_ON						2
 
 /*
  * structure
@@ -76,6 +79,15 @@ typedef struct audio_info_t {
 } audio_info_t;
 
 //sd		------------------------------------------------------------
+
+enum sd_status_t {
+	SD_STATUS_NO,
+	SD_STATUS_PLUG,
+	SD_STATUS_ERR,
+	SD_STATUS_UNPLUG,
+	SD_STATUS_FMT,
+};
+
 typedef struct sd_info_ack_t {
 	unsigned long	plug;
 	unsigned long	totalBytes;
@@ -98,8 +110,7 @@ typedef struct part_msg_info
 
 //iot struct ------------------------------------------------------------
 typedef struct device_iot_config_t {
-	int ir_mode;
-	int ircut_onoff;
+	int day_night_mode;
 	int led1_onoff;
 	int led2_onoff;
 	int amp_on_off;

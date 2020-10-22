@@ -15,7 +15,8 @@
 /*
  * define
  */
-
+#define GPIO_ON 		1
+#define GPIO_OFF 		0
 /*
  * structure
  */

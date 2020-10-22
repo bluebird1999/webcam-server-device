@@ -17,8 +17,7 @@ server DEVICE interface
 #define		DEVICE_CTRL_ADJUST_AUDIO_VOLUME		0x000a
 #define		DEVICE_CTRL_PART_INFO				0x000c
 #define		DEVICE_CTRL_PART_USER_INFO			0x000d
-#define		DEVICE_CTRL_IR_SWITCH				0x0007
-#define		DEVICE_CTRL_IR_MODE					0x0008
+#define 	DEVICE_CTRL_DAY_NIGHT_MODE			0x0008
 #define  	DEVICE_CTRL_MOTOR_HOR_RIGHT			0x000b
 #define  	DEVICE_CTRL_MOTOR_HOR_LEFT			0x000f
 #define 	DEVICE_CTRL_MOTOR_VER_UP			0x0011
@@ -48,8 +47,7 @@ server DEVICE interface
 ################################################################################
 IOT参数结构体：提供给其他服务器的统一参数接口
 typedef struct video_iot_config_t {
-	int ir_mode;
-	int ircut_inoff;
+	int day_night_mode;
 	int led1_onoff;
 	int led2_onoff;
 	int on_off;
