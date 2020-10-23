@@ -41,6 +41,11 @@ server DEVICE interface
 动作ID定义
 #define		DEVICE_ACTION_USER_FORMAT			0x000e
 #define		DEVICE_ACTION_SD_FORMAT				0x0002
+#define		DEVICE_ACTION_SD_UMOUNT				0x0004
+
+#define 	DAY_NIGHT_AUTO						0
+#define 	DAY_NIGHT_OFF						1
+#define 	DAY_NIGHT_ON						2
 
 ################################################################################
 数据结构（STRUCT）
@@ -80,6 +85,15 @@ typedef struct part_msg_info
 }part_msg_info_t;
 
 2）查询设备sd信息使用
+//------- sd_info_ack_t.plug 的可能值
+enum sd_status_t {
+	SD_STATUS_NO,
+	SD_STATUS_PLUG,
+	SD_STATUS_ERR,
+	SD_STATUS_UNPLUG,
+	SD_STATUS_FMT,
+};
+
 /*
  * plug：是否插入
  * totalBytes：总大小

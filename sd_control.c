@@ -9,6 +9,8 @@
 #include <sys/vfs.h>
 #include <sys/mount.h>
 #include <string.h>
+#include <stdbool.h>
+#include <unistd.h>
 #include "../../tools/tools_interface.h"
 #include "sd_control.h"
 #include "device_interface.h"
@@ -16,9 +18,12 @@
 static int get_sd_plug_status();
 static int get_sd_block_mountpath(char *block_path_t, char *mountpath_t);
 static int exec_t(char *cmd);
-static int format_fun(char *block_path_t);
+static void *format_fun(void *arg);
 static int get_rule(char *block_path, char *mountpath, char *src);
 static int get_storage_info(char * mountpoint, space_info_t *info);
+static int get_sd_status();
+static bool sd_format_status_t = false;
+
 
 static int get_storage_info(char * mountpoint, space_info_t *info)
 {
@@ -38,14 +43,44 @@ static int get_storage_info(char * mountpoint, space_info_t *info)
     return 0;
 }
 
+static int get_sd_status()
+{
+	int ret = 0;
+	int sd_status = 0;
+	struct statfs statFS;
+
+	sd_status = get_sd_plug_status();
+	if(sd_status == SD_STATUS_NO)
+		ret = SD_STATUS_NO;
+	else
+	{
+		if(sd_format_status_t)
+		{
+			sd_status = SD_STATUS_FMT;
+		}
+		else if(access(SD_MOUNT_PATH, R_OK))
+		{
+			sd_status = SD_STATUS_UNPLUG;
+		}
+		else
+		{
+			if(statfs(SD_MOUNT_PATH, &statFS) == -1)
+				sd_status = SD_STATUS_ERR;
+		}
+	}
+
+	ret = sd_status;
+	return ret;
+}
+
 int get_sd_info(void **para)
 {
+    int ret;
     struct sd_info_ack_t sd_info;
     struct space_info_t space_info_t;
-    int ret;
 
-    sd_info.plug = get_sd_plug_status();
-    if(sd_info.plug != 1)
+    sd_info.plug = get_sd_status();
+    if(sd_info.plug != SD_STATUS_PLUG)
     {
     	log_err("can not find sd card\n");
     	return -1;
@@ -124,9 +159,9 @@ static int get_sd_plug_status()
     fflush(fp);
     fclose(fp);
     if (data[0] == '1')
-    	return 1;
+    	return SD_STATUS_PLUG;
     else {
-    	return 0;
+    	return SD_STATUS_NO;
     }
 }
 
@@ -195,14 +230,13 @@ static int get_sd_block_mountpath(char *block_path_t, char *mountpath_t)
 static int exec_t(char *cmd)
 {
     FILE *fstream=NULL;
-//  char buff[SIZE1024] = {0};
 
     if(cmd == NULL)
     	return -1;
 
     if(NULL == (fstream = popen(cmd,"r")))
     {
-        printf("execute command failed\n");
+        printf("execute command failed, cmd = %s\n", cmd);
         return -1;
     }
 /*
@@ -220,64 +254,83 @@ static int exec_t(char *cmd)
     return 0;
 }
 
-int format_fun(char *block_path_t)
+void *format_fun(void *arg)
 {
-	if(block_path_t == NULL)
-		return -1;
-
-    char cmd[SIZE] = {0};
-    snprintf(cmd, SIZE, "%s %s",VFAT_FORMAT_TOOL_PATH, block_path_t);
-    //printf("cmd = %s\n", cmd);
-    return exec_t(cmd);
-}
-
-int format_sd()
-{
-    char plug;
+	char cmd[SIZE] = {0};
     char *block_path;
     char *mountpath;
     int ret;
     block_path = malloc(SIZE);
     mountpath = malloc(SIZE);
+
+	misc_set_thread_name("format_sd_thread");
+    pthread_detach(pthread_self());
+
+    ret = get_sd_block_mountpath(block_path, mountpath);
+    if(ret)
+    {
+        log_err("get_sd_block_mountpath prase failed\n");
+        goto err;
+    }
+
+    ret = umount(mountpath);
+    if(ret)
+    {
+        log_err("umount failed\n");
+        goto err;
+    }
+
+    snprintf(cmd, SIZE, "%s %s",VFAT_FORMAT_TOOL_PATH, block_path);
+
+    ret = exec_t(cmd);
+    if(ret)
+    {
+    	log_err("exec_t error");
+    	//if exec failed,mount the original
+    	ret = mount(block_path, mountpath, "vfat", 0, NULL);
+    	goto err;
+    }
+
+    ret = mount(block_path, mountpath, "vfat", 0, NULL);
+    if(ret)
+    {
+        log_err("mount failed\n");
+        goto err;
+    }
+
+err:
+	sd_format_status_t = false;
+    free(block_path);
+    free(mountpath);
+
+    if(ret)
+    	log_info("format sd error\n");
+    else
+    	log_info("format sd success\n");
+
+    pthread_exit(0);
+}
+
+int format_sd()
+{
+    char plug;
+
+    int ret;
+    pthread_t format_tid;
+
     plug = get_sd_plug_status();
 
     if(plug == 1)
     {
-        ret = get_sd_block_mountpath(block_path, mountpath);
-        if(ret)
-        {
-            log_err("get_sd_block_mountpath prase failed\n");
-            return -1;
+    	sd_format_status_t = true;
+        if ((ret = pthread_create(&format_tid, NULL, format_fun, NULL))) {
+        	log_err("create format thread failed, ret = %d\n", ret);
+        	return -1;
         }
-
-        ret = umount(mountpath);
-        if(ret)
-        {
-            log_err("umount failed\n");
-            return -1;
-        }
-
-        ret = format_fun(block_path);
-        if(ret)
-        {
-            log_err("format_fun failed\n");
-            return -1;
-        }
-
-        ret = mount(block_path, mountpath, "vfat", 0, NULL);
-        if(ret)
-        {
-            log_err("mount failed\n");
-            return -1;
-        }
-
-        log_info("format sd success\n");
 
     } else {
     	log_err("can not find sd card\n");
 	}
 
-    free(block_path);
-    free(mountpath);
     return 0;
 }

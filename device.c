@@ -467,15 +467,15 @@ static int server_message_proc(void)
 			ret = format_userdata();
 			send_iot_ack(&msg, &send_msg, MSG_DEVICE_ACTION_ACK, msg.receiver, ret,
 					NULL, 0);
+		} else if( msg.arg_in.cat == DEVICE_ACTION_SD_UMOUNT ) {
+			ret = iot_umount_sd();
+			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
+					NULL, 0);
 		}
 		break;
 	case MSG_DEVICE_CTRL_DIRECT:
 		if( msg.arg_in.cat == DEVICE_CTRL_AMPLIFIER ) {
 			ret = iot_ctrl_amplifier(msg.arg);
-			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
-					NULL, 0);
-		} else if( msg.arg_in.cat == DEVICE_CTRL_SD_UMOUNT ) {
-			ret = iot_umount_sd();
 			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
 					NULL, 0);
 		} else if( msg.arg_in.cat == DEVICE_CTRL_ADJUST_AUDIO_VOLUME ) {

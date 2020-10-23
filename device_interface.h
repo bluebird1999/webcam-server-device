@@ -16,11 +16,10 @@
 /*
  * define
  */
-#define		SERVER_DEVICE_VERSION_STRING		"alpha-3.7"
+#define		SERVER_DEVICE_VERSION_STRING		"alpha-3.8"
 
 //control
 #define		DEVICE_CTRL_SD_INFO					0x0001
-#define		DEVICE_CTRL_SD_UMOUNT				0x0004
 #define		DEVICE_CTRL_LED						0x0003
 #define		DEVICE_CTRL_AMPLIFIER				0x0009
 #define		DEVICE_CTRL_ADJUST_AUDIO_VOLUME		0x000a
@@ -36,6 +35,7 @@
 
 #define		DEVICE_ACTION_USER_FORMAT			0x000e
 #define		DEVICE_ACTION_SD_FORMAT				0x0002
+#define		DEVICE_ACTION_SD_UMOUNT				0x0004
 
 
 //message
@@ -79,7 +79,6 @@ typedef struct audio_info_t {
 } audio_info_t;
 
 //sd		------------------------------------------------------------
-
 enum sd_status_t {
 	SD_STATUS_NO,
 	SD_STATUS_PLUG,
