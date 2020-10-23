@@ -16,6 +16,7 @@
 #include <rtscamkit.h>
 #include <rtsavapi.h>
 #include <rtsvideo.h>
+#include <rts_io_adc.h>
 //#include <dmalloc.h>
 //program header
 #include "../../tools/tools_interface.h"
@@ -86,6 +87,7 @@ static int iot_ctrl_motor(int x_y, int dir);
 static int iot_ctrl_motor_reset();
 static int iot_umount_sd();
 static void *motor_init_func(void *arg);
+static void *daynight_mode_func(void *arg);
 static char* get_string_name(int i);
 /*
  * %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -112,8 +114,9 @@ static int iot_ctrl_motor(int x_y, int dir)
 
 static int iot_ctrl_day_night(void* arg)
 {
-	device_iot_config_t *tmp = NULL;
 	int ret;
+	device_iot_config_t *tmp = NULL;
+	static pthread_t day_night_mode_tid = 0;
 
 	if(arg == NULL)
 		return -1;
@@ -122,17 +125,30 @@ static int iot_ctrl_day_night(void* arg)
 
 	if(tmp->day_night_mode == DAY_NIGHT_AUTO)
 	{
-		//add
+	    if ((ret |= pthread_create(&day_night_mode_tid, NULL, daynight_mode_func, NULL))) {
+	    	log_err("create motor init thread failed, ret=%d\n", ret);
+			ret = -1;
+	    }
 	}
 	else if (tmp->day_night_mode == DAY_NIGHT_OFF)
 	{
 		ret = ctl_ircut(GPIO_ON);
 		ret |= ctl_irled(GPIO_OFF);
+		if(day_night_mode_tid != 0)
+		{
+			pthread_cancel(day_night_mode_tid);
+			day_night_mode_tid = 0;
+		}
 	}
 	else if (tmp->day_night_mode == DAY_NIGHT_ON)
 	{
 		ret = ctl_ircut(GPIO_OFF);
 		ret |= ctl_irled(GPIO_ON);
+		if(day_night_mode_tid != 0)
+		{
+			pthread_cancel(day_night_mode_tid);
+			day_night_mode_tid = 0;
+		}
 	}
 
 	return ret;
@@ -141,8 +157,6 @@ static int iot_ctrl_day_night(void* arg)
 static int iot_umount_sd()
 {
 	int ret;
-
-	log_err("ljx --- iot_umount_sd");
 
 	ret = umount_sd();
 
@@ -548,6 +562,38 @@ static void *motor_init_func(void *arg)
 	{
 		log_err("init_motor init failed");
 	}
+
+	pthread_exit(0);
+}
+
+static void *daynight_mode_func(void *arg)
+{
+	int ret = 0;
+	int value = 0;
+
+    signal(SIGINT, server_thread_termination);
+    signal(SIGTERM, server_thread_termination);
+	misc_set_thread_name("daynight_mode_thread");
+    pthread_detach(pthread_self());
+
+    while(1)
+    {
+    	value = rts_io_adc_get_value(ADC_CHANNEL_0);
+    	if(value > 3000)
+    	{
+    		ret = ctl_ircut(GPIO_ON);
+    		ret |= ctl_irled(GPIO_OFF);
+    	} else {
+    		ret = ctl_ircut(GPIO_OFF);
+    		ret |= ctl_irled(GPIO_ON);
+    	}
+
+    	if(ret)
+    		log_err("day night mode set failed");
+
+		sleep(1);
+    }
+
 
 	pthread_exit(0);
 }
