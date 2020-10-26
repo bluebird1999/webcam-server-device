@@ -131,8 +131,16 @@ int umount_sd()
 		if(mountpath != NULL)
 		{
 			ret = umount(mountpath);
+			if(ret)
+			{
+				log_err("umount failed\n");
+				ret = -1;
+			}
 		}
 	}
+
+	FREE_T(block_path);
+	FREE_T(mountpath);
 
 	return ret;
 }
@@ -229,28 +237,29 @@ static int get_sd_block_mountpath(char *block_path_t, char *mountpath_t)
 
 static int exec_t(char *cmd)
 {
-    FILE *fstream=NULL;
+	int ret;
+	char buff[SIZE] = {0};
+	FILE *fstream = NULL;
 
     if(cmd == NULL)
     	return -1;
 
     if(NULL == (fstream = popen(cmd,"r")))
     {
-        printf("execute command failed, cmd = %s\n", cmd);
+        log_err("execute command failed, cmd = %s\n", cmd);
         return -1;
     }
-/*
-    if(NULL!=fgets(buff, sizeof(buff), fstream))
+
+    //clear fb cache
+    while(NULL != fgets(buff, sizeof(buff), fstream));
+
+    ret = pclose(fstream);
+    if (!WIFEXITED(ret))
     {
-        printf("%s",buff);
+    	log_info("exec pclose failed\n");
+    	return -1;
     }
-    else
-    {
-        pclose(fstream);
-        return -1;
-    }
-*/
-    pclose(fstream);
+
     return 0;
 }
 
@@ -300,8 +309,8 @@ void *format_fun(void *arg)
 
 err:
 	sd_format_status_t = false;
-    free(block_path);
-    free(mountpath);
+	FREE_T(block_path);
+	FREE_T(mountpath);
 
     if(ret)
     	log_info("format sd error\n");

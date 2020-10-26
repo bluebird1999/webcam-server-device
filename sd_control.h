@@ -23,6 +23,12 @@
 #define MOUNT_PROC_PATH 		"/proc/mounts"
 #define SD_PLUG_PATH 			"/sys/devices/platform/ocp/18300000.sdhc/cd"
 
+#define FREE_T(x) {\
+	free(x);\
+	x=NULL;\
+}
+
+
 /*
  * structure
  */

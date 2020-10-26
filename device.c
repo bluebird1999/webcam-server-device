@@ -10,6 +10,7 @@
  */
 //system header
 #include <pthread.h>
+#include <unistd.h>
 #include <signal.h>
 #include <stdio.h>
 #include <string.h>
@@ -125,8 +126,8 @@ static int iot_ctrl_day_night(void* arg)
 
 	if(tmp->day_night_mode == DAY_NIGHT_AUTO)
 	{
-	    if ((ret |= pthread_create(&day_night_mode_tid, NULL, daynight_mode_func, NULL))) {
-	    	log_err("create motor init thread failed, ret=%d\n", ret);
+	    if (ret |= pthread_create(&day_night_mode_tid, NULL, daynight_mode_func, NULL)) {
+	    	log_err("create daynight_mode_func thread failed, ret = %d\n", ret);
 			ret = -1;
 	    }
 	}
@@ -570,16 +571,25 @@ static void *daynight_mode_func(void *arg)
 {
 	int ret = 0;
 	int value = 0;
+	server_status_t st;
 
     signal(SIGINT, server_thread_termination);
     signal(SIGTERM, server_thread_termination);
 	misc_set_thread_name("daynight_mode_thread");
     pthread_detach(pthread_self());
 
-    while(1)
+    while(!server_get_status(STATUS_TYPE_EXIT))
     {
+		//exit logic
+		st = server_get_status(STATUS_TYPE_STATUS);
+    	if( st != STATUS_RUN ) {
+			if ( st == STATUS_IDLE || st == STATUS_SETUP || st == STATUS_START)
+				continue;
+			else
+				break;
+		}
     	value = rts_io_adc_get_value(ADC_CHANNEL_0);
-    	if(value > 3000)
+    	if(value > DAY_NIGHT_LIM)
     	{
     		ret = ctl_ircut(GPIO_ON);
     		ret |= ctl_irled(GPIO_OFF);

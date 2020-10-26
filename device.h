@@ -19,6 +19,8 @@
 #define VOLUME_MIC		0
 #define VOLUME_SPEAKER	1
 
+#define DAY_NIGHT_LIM	3000
+
 /*
  * structure
  */
