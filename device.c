@@ -84,22 +84,44 @@ static int iot_adjust_volume(void* arg);
 static int iot_ctrl_led(void* arg);
 static int iot_ctrl_amplifier(void* arg);
 static int iot_ctrl_day_night(void* arg);
+static int iot_ctrl_motor_auto(int status);
 static int iot_ctrl_motor(int x_y, int dir);
 static int iot_ctrl_motor_reset();
 static int iot_umount_sd();
 static void *motor_init_func(void *arg);
 static void *daynight_mode_func(void *arg);
-static char* get_string_name(int i);
+static void *motor_reset_func(void *arg);
+static char *get_string_name(int i);
 /*
  * %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
  * %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
  * %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
  */
+
+static void *motor_reset_func(void *arg)
+{
+	int ret = 0;
+	server_status_t st;
+
+    signal(SIGINT, server_thread_termination);
+    signal(SIGTERM, server_thread_termination);
+	misc_set_thread_name("motor_reset_thread");
+    pthread_detach(pthread_self());
+
+	ret = motor_reset();
+
+	pthread_exit(0);
+}
+
 static int iot_ctrl_motor_reset()
 {
 	int ret;
+	static pthread_t motor_reset_tid = 0;
 
-	ret = motor_reset();
+    if (ret |= pthread_create(&motor_reset_tid, NULL, motor_reset_func, NULL)) {
+    	log_err("create motor_reset_func thread failed, ret = %d\n", ret);
+		ret = -1;
+    }
 
 	return ret;
 }
@@ -109,6 +131,24 @@ static int iot_ctrl_motor(int x_y, int dir)
 	int ret;
 
 	ret = control_motor(x_y, dir, SPEED_NORMAL);
+
+	return ret;
+}
+
+static int iot_ctrl_motor_auto(int status)
+{
+	int ret = 0;
+
+	if(status == MOTOR_AUTO)
+	{
+
+		ret = motor_auto_move();
+
+	} else if(status == MOTOR_STOP) {
+
+		ret = motor_auto_move_stop();
+
+	}
 
 	return ret;
 }
@@ -188,6 +228,7 @@ static int iot_ctrl_led(void* arg)
 		return -1;
 
 	tmp = (device_iot_config_t *)arg;
+
 
 	if(tmp->led1_onoff == 1)
 		ret = set_blue_led_on();
@@ -525,7 +566,34 @@ static int server_message_proc(void)
 			ret = iot_ctrl_motor_reset();
 			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
 					NULL, 0);
+		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_LEFT_UP ) {
+			ret = iot_ctrl_motor(MOTOR_BOTH, DIR_LEFT_UP);
+			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
+					NULL, 0);
+		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_LEFT_DOWN ) {
+			ret = iot_ctrl_motor(MOTOR_BOTH, DIR_LEFT_DOWN);
+			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
+					NULL, 0);
+		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_RIGHT_UP ) {
+			ret = iot_ctrl_motor(MOTOR_BOTH, DIR_RIGHT_UP);
+			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
+					NULL, 0);
+		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_RIGHT_DOWN ) {
+			ret = iot_ctrl_motor(MOTOR_BOTH, DIR_RIGHT_DOWN);
+			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
+					NULL, 0);
+		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_AUTO ) {
+			ret = iot_ctrl_motor_auto(MOTOR_AUTO);
+			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
+					NULL, 0);
+		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_STOP ) {
+			ret = iot_ctrl_motor_auto(MOTOR_STOP);
+			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
+					NULL, 0);
 		}
+		break;
+	default:
+		log_err("not support message");
 		break;
 	}
 	msg_free(&msg);
@@ -555,7 +623,7 @@ static void *motor_init_func(void *arg)
 
     signal(SIGINT, server_thread_termination);
     signal(SIGTERM, server_thread_termination);
-	misc_set_thread_name("motor_init_poll");
+	misc_set_thread_name("motor_init_func");
     pthread_detach(pthread_self());
 
 	ret = init_motor();
@@ -611,7 +679,7 @@ static void *daynight_mode_func(void *arg)
 static int server_setup(void)
 {
 	int ret = 0;
-	pthread_t motor_tid;
+	static pthread_t motor_tid = 0;
 	rts_set_log_mask(RTS_LOG_MASK_CONS);
 	ret = init_part_info();
 	if(ret)
@@ -779,7 +847,7 @@ int server_device_start(void)
 	}
 }
 
-static char* get_string_name(int i)
+static char *get_string_name(int i)
 {
 	char *ret = NULL;
 
@@ -794,7 +862,7 @@ static char* get_string_name(int i)
 int server_device_message(message_t *msg)
 {
 	int ret=0;
-
+	log_info("push into the device message queue: sender=%s, message=%d, ret=%d", get_string_name(msg->sender), msg->message, ret);
 	if( server_get_status(STATUS_TYPE_STATUS)!= STATUS_RUN ) {
 		log_err("device server is not ready!");
 		return -1;
@@ -805,7 +873,7 @@ int server_device_message(message_t *msg)
 		return ret;
 	}
 	ret = msg_buffer_push(&message, msg);
-	log_info("push into the device message queue: sender=%s, message=%d, ret=%d", get_string_name(msg->sender), msg->message, ret);
+
 	if( ret!=0 )
 		log_err("message push in device error =%d", ret);
 	ret = pthread_rwlock_unlock(&message.lock);

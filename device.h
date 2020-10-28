@@ -21,6 +21,9 @@
 
 #define DAY_NIGHT_LIM	3000
 
+#define MOTOR_AUTO		1
+#define MOTOR_STOP		0
+
 /*
  * structure
  */

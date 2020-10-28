@@ -79,7 +79,7 @@ int ctl_irled(int on_off)
 {
 	//1 -> disable
 	//0 -> enable
-	if(on_off != 0 || on_off != 1)
+	if(on_off != 0 && on_off != 1)
 		return -1;
 	return set_gpio_value(rts_gpio_irled, !on_off);
 }
@@ -88,14 +88,14 @@ int ctl_motor595_enable(int on_off)
 {
 	//1 -> disable
 	//0 -> enable
-	if(on_off != 0 || on_off != 1)
+	if(on_off != 0 && on_off != 1)
 		return -1;
 	return set_gpio_value(rts_gpio_motorable, !on_off);
 }
 
 int ctl_spk_enable(int on_off)
 {
-	if(on_off != 0 || on_off != 1)
+	if(on_off != 0 && on_off != 1)
 		return -1;
 	return set_gpio_value(rts_gpio_spk, on_off);
 }

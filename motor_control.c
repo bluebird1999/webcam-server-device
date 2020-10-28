@@ -18,18 +18,29 @@
 #include "device_interface.h"
 
 static int fd = 0;
-static unsigned int x_cur_step = 0;
-static unsigned int y_cur_step = 0;
+static int x_cur_step = 0;
+static int y_cur_step = 0;
 static ptzctrl_info_t ptz_info;
-static int motor_ready = 0;
+static int motor_status = MOTOR_NONE;
+static int motor_auto_cur_dir_x = DIR_LEFT;
+static int motor_auto_cur_dir_y = DIR_DOWN;
 
 int motor_reset()
 {
 	int ret = 0;
+
+	if(motor_status != MOTOR_READY)
+	{
+		log_err("motor not ready");
+		return -1;
+	}
+
+	motor_status = MOTOR_RESET;
 	//need time, must wait dirver finish
 	ioctl(fd, RTS_PTZ_IOC_RESET, NULL);
 	sleep(5);
 
+	motor_status = MOTOR_READY;
 	return ret;
 }
 
@@ -73,7 +84,7 @@ int init_motor()
 
 	x_cur_step = ptz_info.xmotor_info.pos;
 	y_cur_step = ptz_info.ymotor_info.pos;
-	motor_ready = 1;
+	motor_status = MOTOR_READY;
 
 	return ret;
 err:
@@ -83,30 +94,53 @@ err:
 	return ret;
 }
 
+int motor_auto_move_stop()
+{
+//	if(motor_status != MOTOR_AUTO_MOVE)
+//	{
+//		log_err("motor not in auto move status");
+//		return -1;
+//	}
+//
+//	motor_status = MOTOR_READY;
+//	return 0;
+	log_err("motor_auto_move_stop");
+	return 0;
+}
+
+int motor_auto_move()
+{
+//	if(motor_status != MOTOR_READY)
+//	{
+//		log_err("motor not ready");
+//		return -1;
+//	}
+//
+//	motor_status = MOTOR_AUTO_MOVE;
+//	return 0;
+	log_err("motor_auto_move");
+	return 0;
+}
+
 int control_motor(int x_y, int dir, int speed)
 {
-	if(motor_ready != 1)
+	if(motor_status != MOTOR_READY)
 	{
 		log_err("motor not ready");
 		return -1;
 	}
 
-	if(x_cur_step + MOTOR_STEP >= ptz_info.xmotor_info.max_steps ||
-			x_cur_step - MOTOR_STEP <= 0)
-	{
-		log_info("x-motor has reached the end");
-		return -1;
-	}
-
-	if(y_cur_step + MOTOR_STEP >= ptz_info.ymotor_info.max_steps ||
-			y_cur_step - MOTOR_STEP <= 0)
-	{
-		log_info("y-motor has reached the end");
-		return -1;
-	}
+	motor_status = MOTOR_CTRL;
 
 	if(x_y == MOTOR_X)
 	{
+		if(x_cur_step + MOTOR_STEP >= ptz_info.xmotor_info.max_steps ||
+				x_cur_step - MOTOR_STEP <= 0)
+		{
+			log_info("x-motor has reached the end");
+			return -1;
+		}
+
 		ptz_info.xmotor_info.dir = dir;
 		ptz_info.xmotor_info.speed = speed;
 		ptz_info.xmotor_info.steps = MOTOR_STEP;
@@ -121,6 +155,13 @@ int control_motor(int x_y, int dir, int speed)
 			x_cur_step -= MOTOR_STEP;
 	} else if (x_y == MOTOR_Y) {
 
+		if(y_cur_step + MOTOR_STEP >= ptz_info.ymotor_info.max_steps ||
+				y_cur_step - MOTOR_STEP <= 0)
+		{
+			log_info("y-motor has reached the end");
+			return -1;
+		}
+
 		ptz_info.xmotor_info.dir = DIR_NONE;
 		ptz_info.xmotor_info.speed = speed;
 		ptz_info.xmotor_info.steps = MOTOR_STEP;
@@ -133,16 +174,71 @@ int control_motor(int x_y, int dir, int speed)
 			y_cur_step += MOTOR_STEP;
 		else if (dir == DIR_DOWN)
 			y_cur_step -= MOTOR_STEP;
+	} else if (x_y == MOTOR_BOTH) {
+
+		switch(dir)
+		{
+			case DIR_LEFT_UP :
+				ptz_info.xmotor_info.dir = DIR_LEFT;
+				ptz_info.ymotor_info.dir = DIR_UP;
+				x_cur_step -= MOTOR_STEP;
+				y_cur_step += MOTOR_STEP;
+				break;
+			case DIR_LEFT_DOWN:
+				ptz_info.xmotor_info.dir = DIR_LEFT;
+				ptz_info.ymotor_info.dir = DIR_DOWN;
+				x_cur_step -= MOTOR_STEP;
+				y_cur_step -= MOTOR_STEP;
+				break;
+			case DIR_RIGHT_UP:
+				ptz_info.xmotor_info.dir = DIR_RIGHT;
+				ptz_info.ymotor_info.dir = DIR_UP;
+				x_cur_step += MOTOR_STEP;
+				y_cur_step += MOTOR_STEP;
+				break;
+			case DIR_RIGHT_DOWN:
+				ptz_info.xmotor_info.dir = DIR_RIGHT;
+				ptz_info.ymotor_info.dir = DIR_DOWN;
+				x_cur_step += MOTOR_STEP;
+				y_cur_step -= MOTOR_STEP;
+				break;
+			default:
+				log_err("not support dir");
+				ptz_info.xmotor_info.dir = DIR_NONE;
+				ptz_info.ymotor_info.dir = DIR_NONE;
+				break;
+		}
+
+		if(x_cur_step + MOTOR_STEP >= ptz_info.xmotor_info.max_steps || x_cur_step - MOTOR_STEP <= 0)
+			ptz_info.xmotor_info.dir = DIR_NONE;
+
+		if(y_cur_step + MOTOR_STEP >= ptz_info.ymotor_info.max_steps || y_cur_step - MOTOR_STEP <= 0)
+			ptz_info.ymotor_info.dir = DIR_NONE;
+
+		if((x_cur_step + MOTOR_STEP >= ptz_info.xmotor_info.max_steps || x_cur_step - MOTOR_STEP <= 0) &&
+				(y_cur_step + MOTOR_STEP >= ptz_info.ymotor_info.max_steps || y_cur_step - MOTOR_STEP <= 0))
+		{
+			log_info("x-motor and y-motor has reached the end");
+			return -1;
+		}
+
+		ptz_info.xmotor_info.speed = speed;
+		ptz_info.xmotor_info.steps = MOTOR_STEP;
+
+		ptz_info.ymotor_info.speed = speed;
+		ptz_info.ymotor_info.steps = MOTOR_STEP;
+
 	}
 
 	ioctl(fd, RTS_PTZ_IOC_DRIVE, &ptz_info);
 
+	motor_status = MOTOR_READY;
 	return 0;
 }
 
 void motor_release()
 {
-	motor_ready = 0;
+	motor_status = MOTOR_NONE;
 
 	if(fd)
 		close(fd);

@@ -17,8 +17,10 @@
  */
 #define MOTOR_X			1
 #define MOTOR_Y			2
+#define MOTOR_BOTH		3
 
 #define MOTOR_STEP		5
+
 
 #define DIR_NONE		0
 //for MOTOR_Y
@@ -27,10 +29,25 @@
 //for MOTOR_X
 #define DIR_RIGHT		1
 #define DIR_LEFT		-1
+#define DIR_LEFT_UP		2
+#define DIR_LEFT_DOWN	3
+#define DIR_RIGHT_UP	4
+#define DIR_RIGHT_DOWN	5
+
+
 
 #define SPEED_NORMAL	2
 #define SPEED_LOW		4
 #define SPEED_HIGH		1
+
+
+enum motor_status {
+	MOTOR_NONE = 0,
+	MOTOR_READY,
+	MOTOR_RESET,
+	MOTOR_CTRL,
+	MOTOR_AUTO_MOVE,
+};
 
 #define RTS_PTZ_IOC_MAGIC		'm'
 #define RTS_PTZ_IOC_DRIVE		_IOW(RTS_PTZ_IOC_MAGIC, 1, struct ptzctrl_info)
@@ -68,5 +85,7 @@ int init_motor();
 int control_motor(int x_y, int dir, int speed);
 int motor_reset();
 void motor_release();
+int motor_auto_move();
+int motor_auto_move_stop();
 
 #endif /* MOTOR_CONTRIL_H_ */
