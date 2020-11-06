@@ -19,8 +19,7 @@
 #define MOTOR_Y			2
 #define MOTOR_BOTH		3
 
-#define MOTOR_STEP		5
-
+#define MOTOR_STEP		150
 
 #define DIR_NONE		0
 //for MOTOR_Y

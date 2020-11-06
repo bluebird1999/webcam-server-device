@@ -64,26 +64,8 @@ int init_motor()
 	//reset
 	//need time, about 48s
 	ioctl(fd, RTS_PTZ_IOC_RESET, NULL);
-	//sleep(15);
+	sleep(3);
 
-	ioctl(fd, RTS_PTZ_IOC_G_INFO, &ptz_info);
-
-	if(ptz_info.xmotor_info.max_degrees == 0 || ptz_info.xmotor_info.max_steps == 0)
-	{
-		log_err("get x-motor info failed");
-		ret = -1;
-		goto err;
-	}
-
-	if(ptz_info.ymotor_info.max_degrees == 0 || ptz_info.ymotor_info.max_steps == 0)
-	{
-		log_err("get y-motor info failed");
-		ret = -1;
-		goto err;
-	}
-
-	x_cur_step = ptz_info.xmotor_info.pos;
-	y_cur_step = ptz_info.ymotor_info.pos;
 	motor_status = MOTOR_READY;
 
 	return ret;
@@ -134,33 +116,15 @@ int control_motor(int x_y, int dir, int speed)
 
 	if(x_y == MOTOR_X)
 	{
-		if(x_cur_step + MOTOR_STEP >= ptz_info.xmotor_info.max_steps ||
-				x_cur_step - MOTOR_STEP <= 0)
-		{
-			log_info("x-motor has reached the end");
-			return -1;
-		}
-
+		ptz_info.xmotor_info.steps = MOTOR_STEP;
 		ptz_info.xmotor_info.dir = dir;
 		ptz_info.xmotor_info.speed = speed;
-		ptz_info.xmotor_info.steps = MOTOR_STEP;
 
 		ptz_info.ymotor_info.dir = DIR_NONE;
 		ptz_info.ymotor_info.speed = speed;
 		ptz_info.ymotor_info.steps = MOTOR_STEP;
 
-		if(dir == DIR_RIGHT)
-			x_cur_step += MOTOR_STEP;
-		else if (dir == DIR_LEFT)
-			x_cur_step -= MOTOR_STEP;
 	} else if (x_y == MOTOR_Y) {
-
-		if(y_cur_step + MOTOR_STEP >= ptz_info.ymotor_info.max_steps ||
-				y_cur_step - MOTOR_STEP <= 0)
-		{
-			log_info("y-motor has reached the end");
-			return -1;
-		}
 
 		ptz_info.xmotor_info.dir = DIR_NONE;
 		ptz_info.xmotor_info.speed = speed;
@@ -170,10 +134,6 @@ int control_motor(int x_y, int dir, int speed)
 		ptz_info.ymotor_info.speed = speed;
 		ptz_info.ymotor_info.steps = MOTOR_STEP;
 
-		if(dir == DIR_UP)
-			y_cur_step += MOTOR_STEP;
-		else if (dir == DIR_DOWN)
-			y_cur_step -= MOTOR_STEP;
 	} else if (x_y == MOTOR_BOTH) {
 
 		switch(dir)
@@ -181,45 +141,24 @@ int control_motor(int x_y, int dir, int speed)
 			case DIR_LEFT_UP :
 				ptz_info.xmotor_info.dir = DIR_LEFT;
 				ptz_info.ymotor_info.dir = DIR_UP;
-				x_cur_step -= MOTOR_STEP;
-				y_cur_step += MOTOR_STEP;
 				break;
 			case DIR_LEFT_DOWN:
 				ptz_info.xmotor_info.dir = DIR_LEFT;
 				ptz_info.ymotor_info.dir = DIR_DOWN;
-				x_cur_step -= MOTOR_STEP;
-				y_cur_step -= MOTOR_STEP;
 				break;
 			case DIR_RIGHT_UP:
 				ptz_info.xmotor_info.dir = DIR_RIGHT;
 				ptz_info.ymotor_info.dir = DIR_UP;
-				x_cur_step += MOTOR_STEP;
-				y_cur_step += MOTOR_STEP;
 				break;
 			case DIR_RIGHT_DOWN:
 				ptz_info.xmotor_info.dir = DIR_RIGHT;
 				ptz_info.ymotor_info.dir = DIR_DOWN;
-				x_cur_step += MOTOR_STEP;
-				y_cur_step -= MOTOR_STEP;
 				break;
 			default:
 				log_err("not support dir");
 				ptz_info.xmotor_info.dir = DIR_NONE;
 				ptz_info.ymotor_info.dir = DIR_NONE;
 				break;
-		}
-
-		if(x_cur_step + MOTOR_STEP >= ptz_info.xmotor_info.max_steps || x_cur_step - MOTOR_STEP <= 0)
-			ptz_info.xmotor_info.dir = DIR_NONE;
-
-		if(y_cur_step + MOTOR_STEP >= ptz_info.ymotor_info.max_steps || y_cur_step - MOTOR_STEP <= 0)
-			ptz_info.ymotor_info.dir = DIR_NONE;
-
-		if((x_cur_step + MOTOR_STEP >= ptz_info.xmotor_info.max_steps || x_cur_step - MOTOR_STEP <= 0) &&
-				(y_cur_step + MOTOR_STEP >= ptz_info.ymotor_info.max_steps || y_cur_step - MOTOR_STEP <= 0))
-		{
-			log_info("x-motor and y-motor has reached the end");
-			return -1;
 		}
 
 		ptz_info.xmotor_info.speed = speed;

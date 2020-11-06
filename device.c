@@ -130,7 +130,7 @@ static int iot_ctrl_motor(int x_y, int dir)
 {
 	int ret;
 
-	ret = control_motor(x_y, dir, SPEED_NORMAL);
+	ret = control_motor(x_y, dir, SPEED_HIGH);
 
 	return ret;
 }
