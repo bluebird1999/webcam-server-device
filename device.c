@@ -29,6 +29,7 @@
 #include "../../server/recorder/recorder_interface.h"
 //server header
 #include "device.h"
+#include "config.h"
 #include "device_interface.h"
 #include "sd_control_interface.h"
 #include "audio_control_interface.h"
@@ -39,6 +40,7 @@
  * static
  */
 //variable
+static device_config_t		device_config_;
 static server_info_t 		info;
 static message_buffer_t		message;
 static server_name_t server_name_tt[] = {
@@ -54,6 +56,8 @@ static server_name_t server_name_tt[] = {
 		{9, "recorder"},
 		{10, "player"},
 		{11, "speaker"},
+		{12, "video2"},
+		{13, "scanner"},
 		{32, "manager"},
 };
 //function
@@ -101,25 +105,26 @@ static char *get_string_name(int i);
 static void *motor_reset_func(void *arg)
 {
 	int ret = 0;
-	server_status_t st;
 
-    signal(SIGINT, server_thread_termination);
-    signal(SIGTERM, server_thread_termination);
+    signal(SIGINT, (__sighandler_t)server_thread_termination);
+    signal(SIGTERM, (__sighandler_t)server_thread_termination);
 	misc_set_thread_name("motor_reset_thread");
     pthread_detach(pthread_self());
 
 	ret = motor_reset();
+	if(ret)
+		log_qcy(DEBUG_SERIOUS, "motor_reset not ready or failed");
 
 	pthread_exit(0);
 }
 
 static int iot_ctrl_motor_reset()
 {
-	int ret;
+	int ret = 0;
 	static pthread_t motor_reset_tid = 0;
 
     if (ret |= pthread_create(&motor_reset_tid, NULL, motor_reset_func, NULL)) {
-    	log_err("create motor_reset_func thread failed, ret = %d\n", ret);
+    	log_qcy(DEBUG_SERIOUS, "create motor_reset_func thread failed, ret = %d\n", ret);
 		ret = -1;
     }
 
@@ -130,7 +135,7 @@ static int iot_ctrl_motor(int x_y, int dir)
 {
 	int ret;
 
-	ret = control_motor(x_y, dir, SPEED_HIGH);
+	ret = control_motor(x_y, dir, device_config_);
 
 	return ret;
 }
@@ -155,7 +160,7 @@ static int iot_ctrl_motor_auto(int status)
 
 static int iot_ctrl_day_night(void* arg)
 {
-	int ret;
+	int ret = 0;
 	device_iot_config_t *tmp = NULL;
 	static pthread_t day_night_mode_tid = 0;
 
@@ -167,7 +172,7 @@ static int iot_ctrl_day_night(void* arg)
 	if(tmp->day_night_mode == DAY_NIGHT_AUTO)
 	{
 	    if (ret |= pthread_create(&day_night_mode_tid, NULL, daynight_mode_func, NULL)) {
-	    	log_err("create daynight_mode_func thread failed, ret = %d\n", ret);
+	    	log_qcy(DEBUG_SERIOUS, "create daynight_mode_func thread failed, ret = %d\n", ret);
 			ret = -1;
 	    }
 	}
@@ -257,19 +262,19 @@ static int iot_adjust_volume(void* arg)
 	//check the parameters
 	if(tmp->audio_iot_info.in_out != 1 && tmp->audio_iot_info.in_out != 0)
 	{
-		log_err("in_out parameters error");
+		log_qcy(DEBUG_SERIOUS, "in_out parameters error");
 		ret = -1;
 		goto err;
 	}
 	if(tmp->audio_iot_info.type > 4 || tmp->audio_iot_info.type < 0)
 	{
-		log_err("type parameters error");
+		log_qcy(DEBUG_SERIOUS, "type parameters error");
 		ret = -1;
 		goto err;
 	}
 	if(tmp->audio_iot_info.volume < -1 || tmp->audio_iot_info.volume > 100)
 	{
-		log_err("volume parameters error");
+		log_qcy(DEBUG_SERIOUS, "volume parameters error");
 		ret = -1;
 		goto err;
 	}
@@ -279,13 +284,13 @@ static int iot_adjust_volume(void* arg)
 	ctrl_audio.volume = tmp->audio_iot_info.volume;
 
 	if(tmp->audio_iot_info.in_out == VOLUME_SPEAKER)
-		ret = adjust_audio_volume(&ctrl_audio);
+		ret = adjust_audio_volume(&ctrl_audio, device_config_);
 	else if(tmp->audio_iot_info.in_out == VOLUME_MIC)
-		ret = adjust_input_audio_volume(&ctrl_audio);
+		ret = adjust_input_audio_volume(&ctrl_audio, device_config_);
 
 	return ret;
 err:
-	log_err("invalid parameters\n");
+	log_qcy(DEBUG_SERIOUS, "invalid parameters\n");
 	return ret;
 }
 
@@ -344,7 +349,7 @@ static int iot_get_sd_info(device_iot_config_t *tmp)
 	if(tmp == NULL)
 		return -1;
 	memset(tmp,0,sizeof(device_iot_config_t));
-	ret = get_sd_info(&para);
+	ret = get_sd_info(&para, device_config_);
 	if(!ret)
 	{
 		info = (sd_info_ack_t *)para;
@@ -439,7 +444,7 @@ static int server_set_status(int type, int st)
 	int ret=-1;
 	ret = pthread_rwlock_wrlock(&info.lock);
 	if(ret)	{
-		log_err("add lock fail, ret = %d", ret);
+		log_qcy(DEBUG_SERIOUS, "add lock fail, ret = %d", ret);
 		return ret;
 	}
 	if(type == STATUS_TYPE_STATUS)
@@ -448,7 +453,7 @@ static int server_set_status(int type, int st)
 		info.exit = st;
 	ret = pthread_rwlock_unlock(&info.lock);
 	if (ret)
-		log_err("add unlock fail, ret = %d", ret);
+		log_qcy(DEBUG_SERIOUS, "add unlock fail, ret = %d", ret);
 	return ret;
 }
 
@@ -458,7 +463,7 @@ static int server_get_status(int type)
 	int ret;
 	ret = pthread_rwlock_wrlock(&info.lock);
 	if(ret)	{
-		log_err("add lock fail, ret = %d", ret);
+		log_qcy(DEBUG_SERIOUS, "add lock fail, ret = %d", ret);
 		return ret;
 	}
 	if(type == STATUS_TYPE_STATUS)
@@ -467,7 +472,7 @@ static int server_get_status(int type)
 		st = info.exit;
 	ret = pthread_rwlock_unlock(&info.lock);
 	if (ret)
-		log_err("add unlock fail, ret = %d", ret);
+		log_qcy(DEBUG_SERIOUS, "add unlock fail, ret = %d", ret);
 	return st;
 }
 //-------------------------------------------需要修改
@@ -481,13 +486,13 @@ static int server_message_proc(void)
 	msg_init(&send_msg);
 	ret = pthread_rwlock_wrlock(&message.lock);
 	if(ret)	{
-		log_err("add message lock fail, ret = %d\n", ret);
+		log_qcy(DEBUG_SERIOUS, "add message lock fail, ret = %d\n", ret);
 		return ret;
 	}
 	ret = msg_buffer_pop(&message, &msg);
 	ret1 = pthread_rwlock_unlock(&message.lock);
 	if (ret1)
-		log_err("add message unlock fail, ret = %d\n", ret1);
+		log_qcy(DEBUG_SERIOUS, "add message unlock fail, ret = %d\n", ret1);
 	if( ret == -1)
 		return -1;
 	else if( ret == 1)
@@ -520,7 +525,7 @@ static int server_message_proc(void)
 			send_iot_ack(&msg, &send_msg, MSG_DEVICE_ACTION_ACK, msg.receiver, ret,
 					NULL, 0);
 		} else if( msg.arg_in.cat == DEVICE_ACTION_USER_FORMAT ) {
-			ret = format_userdata();
+			//ret = format_userdata();
 			send_iot_ack(&msg, &send_msg, MSG_DEVICE_ACTION_ACK, msg.receiver, ret,
 					NULL, 0);
 		} else if( msg.arg_in.cat == DEVICE_ACTION_SD_UMOUNT ) {
@@ -593,7 +598,7 @@ static int server_message_proc(void)
 		}
 		break;
 	default:
-		log_err("not support message");
+		log_qcy(DEBUG_SERIOUS, "not support message");
 		break;
 	}
 	msg_free(&msg);
@@ -621,15 +626,15 @@ static void *motor_init_func(void *arg)
 {
 	int ret = 0;
 
-    signal(SIGINT, server_thread_termination);
-    signal(SIGTERM, server_thread_termination);
+    signal(SIGINT, (__sighandler_t)server_thread_termination);
+    signal(SIGTERM, (__sighandler_t)server_thread_termination);
 	misc_set_thread_name("motor_init_func");
     pthread_detach(pthread_self());
 
 	ret = init_motor();
 	if(ret)
 	{
-		log_err("init_motor init failed");
+		log_qcy(DEBUG_SERIOUS, "init_motor init failed");
 	}
 
 	pthread_exit(0);
@@ -641,8 +646,8 @@ static void *daynight_mode_func(void *arg)
 	int value = 0;
 	server_status_t st;
 
-    signal(SIGINT, server_thread_termination);
-    signal(SIGTERM, server_thread_termination);
+    signal(SIGINT, (__sighandler_t)server_thread_termination);
+    signal(SIGTERM, (__sighandler_t)server_thread_termination);
 	misc_set_thread_name("daynight_mode_thread");
     pthread_detach(pthread_self());
 
@@ -657,7 +662,7 @@ static void *daynight_mode_func(void *arg)
 				break;
 		}
     	value = rts_io_adc_get_value(ADC_CHANNEL_0);
-    	if(value > DAY_NIGHT_LIM)
+    	if(value > device_config_.day_night_lim)
     	{
     		ret = ctl_ircut(GPIO_ON);
     		ret |= ctl_irled(GPIO_OFF);
@@ -667,7 +672,7 @@ static void *daynight_mode_func(void *arg)
     	}
 
     	if(ret)
-    		log_err("day night mode set failed");
+    		log_qcy(DEBUG_SERIOUS, "day night mode set failed");
 
 		sleep(1);
     }
@@ -681,10 +686,19 @@ static int server_setup(void)
 	int ret = 0;
 	static pthread_t motor_tid = 0;
 	rts_set_log_mask(RTS_LOG_MASK_CONS);
+
+	ret = config_device_read(&device_config_);
+	if( ret )
+	{
+		log_qcy(DEBUG_SERIOUS, "config_manager_read failed");
+		ret = -1;
+		goto err;
+	}
+
 	ret = init_part_info();
 	if(ret)
 	{
-		log_err("init_part_info init failed");
+		log_qcy(DEBUG_SERIOUS, "init_part_info init failed");
 		ret = -1;
 		goto err;
 	}
@@ -692,13 +706,13 @@ static int server_setup(void)
 	ret = init_led_gpio();
 	if(ret)
 	{
-		log_err("init_led_gpio init failed");
+		log_qcy(DEBUG_SERIOUS, "init_led_gpio init failed");
 		ret = -1;
 		goto err;
 	}
 
     if ((ret = pthread_create(&motor_tid, NULL, motor_init_func, NULL))) {
-    	log_err("create motor init thread failed, ret=%d\n", ret);
+    	log_qcy(DEBUG_SERIOUS, "create motor init thread failed, ret=%d\n", ret);
 		ret = -1;
 		goto err;
     }
@@ -729,7 +743,7 @@ static int server_run(void)
 {
 	int ret = 0;
 	if( server_message_proc()!= 0)
-		log_err("error in message proc");
+		log_qcy(DEBUG_SERIOUS, "error in message proc");
 	return ret;
 }
 
@@ -750,7 +764,7 @@ static int server_restart(void)
 static int server_error(void)
 {
 	int ret = 0;
-	server_release();
+	server_set_status(STATUS_TYPE_EXIT,1);
 	return ret;
 }
 
@@ -777,8 +791,8 @@ static int heart_beat_proc(void)
 
 static void *server_func(void)
 {
-    signal(SIGINT, server_thread_termination);
-    signal(SIGTERM, server_thread_termination);
+    signal(SIGINT, (__sighandler_t)server_thread_termination);
+    signal(SIGTERM, (__sighandler_t)server_thread_termination);
 	misc_set_thread_name("server_device");
 	pthread_detach(pthread_self());
 	while( !info.exit ) {
@@ -815,7 +829,7 @@ static void *server_func(void)
 		heart_beat_proc();
 	}
 	server_release();
-	log_info("-----------thread exit: server_device-----------");
+	log_qcy(DEBUG_INFO, "-----------thread exit: server_device-----------");
 	message_t msg;
     /********message body********/
 	msg_init(&msg);
@@ -836,13 +850,13 @@ int server_device_start(void)
 		msg_buffer_init(&message, MSG_BUFFER_OVERFLOW_NO);
 	}
 	pthread_rwlock_init(&info.lock, NULL);
-	ret = pthread_create(&info.id, NULL, server_func, NULL);
+	ret = pthread_create(&info.id, NULL, (void *)server_func, NULL);
 	if(ret != 0) {
-		log_err("device server create error! ret = %d",ret);
+		log_qcy(DEBUG_SERIOUS, "device server create error! ret = %d",ret);
 		 return ret;
 	}
 	else {
-		log_err("device server create successful!");
+		log_qcy(DEBUG_SERIOUS, "device server create successful!");
 		return 0;
 	}
 }
@@ -862,22 +876,22 @@ static char *get_string_name(int i)
 int server_device_message(message_t *msg)
 {
 	int ret=0;
-	log_info("push into the device message queue: sender=%s, message=%d, ret=%d", get_string_name(msg->sender), msg->message, ret);
+
 	if( server_get_status(STATUS_TYPE_STATUS)!= STATUS_RUN ) {
-		log_err("device server is not ready!");
+		log_qcy(DEBUG_SERIOUS, "device server is not ready!");
 		return -1;
 	}
 	ret = pthread_rwlock_wrlock(&message.lock);
 	if(ret)	{
-		log_err("add message lock fail, ret = %d\n", ret);
+		log_qcy(DEBUG_SERIOUS, "add message lock fail, ret = %d\n", ret);
 		return ret;
 	}
 	ret = msg_buffer_push(&message, msg);
-
 	if( ret!=0 )
-		log_err("message push in device error =%d", ret);
+		log_qcy(DEBUG_SERIOUS, "message push in device error =%d", ret);
+	log_qcy(DEBUG_INFO, "push into the device message queue: sender=%s, message=%d, ret=%d", get_string_name(msg->sender), msg->message, ret);
 	ret = pthread_rwlock_unlock(&message.lock);
 	if (ret)
-		log_err("add message unlock fail, ret = %d\n", ret);
+		log_qcy(DEBUG_SERIOUS, "add message unlock fail, ret = %d\n", ret);
 	return ret;
 }

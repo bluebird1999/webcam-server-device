@@ -18,7 +18,7 @@
 #define SIZE1024 	1024
 #define SIZE64	 	64
 #define CMDLINE_FILE "/proc/cmdline"
-#define USER_MOUNT_PATH "/overlay"
+#define USER_MOUNT_PATH "/opt"
 /*
  * structure
  */

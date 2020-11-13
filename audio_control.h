@@ -11,7 +11,7 @@
 /*
  * header
  */
-
+#include "config.h"
 /*
  * define
  */
@@ -21,7 +21,7 @@
 #define VOLUME_MUTE		3
 #define VOLUME_UNMUTE		4
 
-#define VOLUME_STEP 	10
+//#define VOLUME_STEP 	10
 
 /*
  * structure
@@ -36,8 +36,8 @@ typedef struct audio_info_t_m {
  * function
  */
 
-int adjust_audio_volume(audio_info_t_m *para);
-int adjust_input_audio_volume(audio_info_t_m *para);
+int adjust_audio_volume(audio_info_t_m *para, device_config_t config_t);
+int adjust_input_audio_volume(audio_info_t_m *para, device_config_t config_t);
 int ctl_spk(int *para);
 
 #endif /* AUDIO_CONTRIL_H_ */

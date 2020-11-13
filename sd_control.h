@@ -11,13 +11,13 @@
 /*
  * header
  */
+#include "config.h"
 
 /*
  * define
  */
 #define SIZE 					128
 #define SIZE1024 				1024
-#define SD_MOUNTED_FLAG			"/mnt/.mounted"
 #define SD_MOUNT_PATH 			"/mnt/media"
 #define VFAT_FORMAT_TOOL_PATH 	"/sbin/mkfs.vfat"
 #define MOUNT_PROC_PATH 		"/proc/mounts"
@@ -43,7 +43,7 @@ typedef struct space_info_t {
  * function
  */
 
-int get_sd_info(void **para);
+int get_sd_info(void **para, device_config_t config_t);
 //int get_storage_info(char * mountpoint, space_info_t *sd_info);
 int format_sd();
 int umount_sd();

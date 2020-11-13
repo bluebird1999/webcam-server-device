@@ -16,14 +16,11 @@
 #include "motor_control.h"
 #include "gpio_control_interface.h"
 #include "device_interface.h"
+#include "config.h"
 
 static int fd = 0;
-static int x_cur_step = 0;
-static int y_cur_step = 0;
 static ptzctrl_info_t ptz_info;
 static int motor_status = MOTOR_NONE;
-static int motor_auto_cur_dir_x = DIR_LEFT;
-static int motor_auto_cur_dir_y = DIR_DOWN;
 
 int motor_reset()
 {
@@ -31,7 +28,7 @@ int motor_reset()
 
 	if(motor_status != MOTOR_READY)
 	{
-		log_err("motor not ready");
+		log_qcy(DEBUG_SERIOUS, "motor not ready");
 		return -1;
 	}
 
@@ -56,7 +53,7 @@ int init_motor()
 	fd = open("/dev/rts-ptz", O_RDWR);
 	if(!fd)
 	{
-		log_err("can not open /dev/rts-ptz, please check");
+		log_qcy(DEBUG_SERIOUS, "can not open /dev/rts-ptz, please check");
 		ret = -1;
 		goto err;
 	}
@@ -80,13 +77,13 @@ int motor_auto_move_stop()
 {
 //	if(motor_status != MOTOR_AUTO_MOVE)
 //	{
-//		log_err("motor not in auto move status");
+//		log_qcy(DEBUG_SERIOUS, "motor not in auto move status");
 //		return -1;
 //	}
 //
 //	motor_status = MOTOR_READY;
 //	return 0;
-	log_err("motor_auto_move_stop");
+	log_qcy(DEBUG_SERIOUS, "motor_auto_move_stop");
 	return 0;
 }
 
@@ -94,21 +91,21 @@ int motor_auto_move()
 {
 //	if(motor_status != MOTOR_READY)
 //	{
-//		log_err("motor not ready");
+//		log_qcy(DEBUG_SERIOUS, "motor not ready");
 //		return -1;
 //	}
 //
 //	motor_status = MOTOR_AUTO_MOVE;
 //	return 0;
-	log_err("motor_auto_move");
+	log_qcy(DEBUG_SERIOUS, "motor_auto_move");
 	return 0;
 }
 
-int control_motor(int x_y, int dir, int speed)
+int control_motor(int x_y, int dir, device_config_t config_t)
 {
 	if(motor_status != MOTOR_READY)
 	{
-		log_err("motor not ready");
+		log_qcy(DEBUG_SERIOUS, "motor not ready");
 		return -1;
 	}
 
@@ -116,23 +113,23 @@ int control_motor(int x_y, int dir, int speed)
 
 	if(x_y == MOTOR_X)
 	{
-		ptz_info.xmotor_info.steps = MOTOR_STEP;
+		ptz_info.xmotor_info.steps = config_t.motor_step;
 		ptz_info.xmotor_info.dir = dir;
-		ptz_info.xmotor_info.speed = speed;
+		ptz_info.xmotor_info.speed = config_t.motor_speed;
 
 		ptz_info.ymotor_info.dir = DIR_NONE;
-		ptz_info.ymotor_info.speed = speed;
-		ptz_info.ymotor_info.steps = MOTOR_STEP;
+		ptz_info.ymotor_info.speed = config_t.motor_speed;
+		ptz_info.ymotor_info.steps = config_t.motor_step;
 
 	} else if (x_y == MOTOR_Y) {
 
 		ptz_info.xmotor_info.dir = DIR_NONE;
-		ptz_info.xmotor_info.speed = speed;
-		ptz_info.xmotor_info.steps = MOTOR_STEP;
+		ptz_info.xmotor_info.speed = config_t.motor_speed;
+		ptz_info.xmotor_info.steps = config_t.motor_step;
 
 		ptz_info.ymotor_info.dir = dir;
-		ptz_info.ymotor_info.speed = speed;
-		ptz_info.ymotor_info.steps = MOTOR_STEP;
+		ptz_info.ymotor_info.speed = config_t.motor_speed;
+		ptz_info.ymotor_info.steps = config_t.motor_step;
 
 	} else if (x_y == MOTOR_BOTH) {
 
@@ -155,17 +152,17 @@ int control_motor(int x_y, int dir, int speed)
 				ptz_info.ymotor_info.dir = DIR_DOWN;
 				break;
 			default:
-				log_err("not support dir");
+				log_qcy(DEBUG_SERIOUS, "not support dir");
 				ptz_info.xmotor_info.dir = DIR_NONE;
 				ptz_info.ymotor_info.dir = DIR_NONE;
 				break;
 		}
 
-		ptz_info.xmotor_info.speed = speed;
-		ptz_info.xmotor_info.steps = MOTOR_STEP;
+		ptz_info.xmotor_info.speed = config_t.motor_speed;
+		ptz_info.xmotor_info.steps = config_t.motor_step;
 
-		ptz_info.ymotor_info.speed = speed;
-		ptz_info.ymotor_info.steps = MOTOR_STEP;
+		ptz_info.ymotor_info.speed = config_t.motor_speed;
+		ptz_info.ymotor_info.steps = config_t.motor_step;
 
 	}
 

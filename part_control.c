@@ -29,7 +29,7 @@ int get_user_info(void **para)
 	struct statfs statFS;
 
     if (statfs(USER_MOUNT_PATH, &statFS) == -1){
-        log_err("statfs failed for path->[%s], please confirm the userdata is mounted\n", USER_MOUNT_PATH);
+        log_qcy(DEBUG_SERIOUS, "statfs failed for path->[%s], please confirm the userdata is mounted\n", USER_MOUNT_PATH);
         return (-1);
     }
 
@@ -40,7 +40,7 @@ int get_user_info(void **para)
 
     *para = calloc( sizeof(sd_info_ack_t), 1);
     if( *para == NULL ) {
-        log_err("memory allocation failed");
+        log_qcy(DEBUG_SERIOUS, "memory allocation failed");
         return -1;
     }
 
@@ -52,7 +52,7 @@ int get_part_info(void **para)
 {
     *para = calloc( sizeof(part_msg_info_t), 1);
     if( *para == NULL ) {
-        log_err("memory allocation failed");
+        log_qcy(DEBUG_SERIOUS, "memory allocation failed");
         return -1;
     }
 
@@ -99,12 +99,12 @@ int init_part_info()
 	memset(&my_part_info, 0, sizeof(my_part_info));
     fp = fopen(CMDLINE_FILE, "r");
     if (fp == NULL) {
-    	log_err("fopen: fail\n");
+    	log_qcy(DEBUG_SERIOUS, "fopen: fail\n");
         return -1;
     }
 
     if (fread(data, 1, sizeof(data), fp) == -1) {
-    	log_err("fread: fail\n");
+    	log_qcy(DEBUG_SERIOUS, "fread: fail\n");
         fclose(fp);
         return -1;
     }

@@ -48,26 +48,26 @@ int ctl_ircut(int on_off)
 		ret = set_gpio_value(rts_gpio_ircutain, LED_ON);
 		if(ret)
 		{
-			log_err("set gpio %d failed\n",IRCUR_AIN);
+			log_qcy(DEBUG_SERIOUS, "set gpio %d failed\n",IRCUR_AIN);
 			return -1;
 		}
 		ret = set_gpio_value(rts_gpio_ircutbin, LED_OFF);
 		if(ret)
 		{
-			log_err("set gpio %d failed\n",IRCUR_BIN);
+			log_qcy(DEBUG_SERIOUS, "set gpio %d failed\n",IRCUR_BIN);
 			return -1;
 		}
 	} else if(on_off == 0){
 		ret = set_gpio_value(rts_gpio_ircutbin, LED_ON);
 		if(ret)
 		{
-			log_err("set gpio %d failed\n",IRCUR_AIN);
+			log_qcy(DEBUG_SERIOUS, "set gpio %d failed\n",IRCUR_AIN);
 			return -1;
 		}
 		ret = set_gpio_value(rts_gpio_ircutain, LED_OFF);
 		if(ret)
 		{
-			log_err("set gpio %d failed\n",IRCUR_BIN);
+			log_qcy(DEBUG_SERIOUS, "set gpio %d failed\n",IRCUR_BIN);
 			return -1;
 		}
 	}
@@ -126,13 +126,13 @@ int init_led_gpio()
 	rts_gpio_led1 = rts_io_gpio_request(DOMAIN_GPIO_SYSTEM, LED1_GPIO);
 	if(!rts_gpio_led1)
 	{
-		log_err("can not requset gpio num %d\n", LED1_GPIO);
+		log_qcy(DEBUG_SERIOUS, "can not requset gpio num %d\n", LED1_GPIO);
 		return -1;
 	}
 
 	if(rts_io_gpio_set_direction(rts_gpio_led1, GPIO_OUTPUT))
 	{
-		log_err("can not set gpio %d dir\n", LED1_GPIO);
+		log_qcy(DEBUG_SERIOUS, "can not set gpio %d dir\n", LED1_GPIO);
 		rts_io_gpio_free(rts_gpio_led1);
 		return -1;
 	}
@@ -141,13 +141,13 @@ int init_led_gpio()
 	rts_gpio_led2 = rts_io_gpio_request(DOMAIN_GPIO_SYSTEM, LED2_GPIO);
 	if(!rts_gpio_led2)
 	{
-		log_err("can not requset gpio num %d\n", LED2_GPIO);
+		log_qcy(DEBUG_SERIOUS, "can not requset gpio num %d\n", LED2_GPIO);
 		return -1;
 	}
 
 	if(rts_io_gpio_set_direction(rts_gpio_led2, GPIO_OUTPUT))
 	{
-		log_err("can not set gpio %d dir\n", LED2_GPIO);
+		log_qcy(DEBUG_SERIOUS, "can not set gpio %d dir\n", LED2_GPIO);
 		rts_io_gpio_free(rts_gpio_led2);
 		return -1;
 	}
@@ -156,13 +156,13 @@ int init_led_gpio()
 	rts_gpio_spk = rts_io_gpio_request(DOMAIN_GPIO_SYSTEM, SPK_GPIO);
 	if(!rts_gpio_spk)
 	{
-		log_err("can not requset gpio num %d\n", SPK_GPIO);
+		log_qcy(DEBUG_SERIOUS, "can not requset gpio num %d\n", SPK_GPIO);
 		return -1;
 	}
 
 	if(rts_io_gpio_set_direction(rts_gpio_spk, GPIO_OUTPUT))
 	{
-		log_err("can not set gpio %d dir\n", SPK_GPIO);
+		log_qcy(DEBUG_SERIOUS, "can not set gpio %d dir\n", SPK_GPIO);
 		rts_io_gpio_free(rts_gpio_spk);
 		return -1;
 	}
@@ -171,13 +171,13 @@ int init_led_gpio()
 	rts_gpio_ircutain = rts_io_gpio_request(DOMAIN_GPIO_SYSTEM, IRCUR_AIN);
 	if(!rts_gpio_ircutain)
 	{
-		log_err("can not requset gpio num %d\n", IRCUR_AIN);
+		log_qcy(DEBUG_SERIOUS, "can not requset gpio num %d\n", IRCUR_AIN);
 		return -1;
 	}
 
 	if(rts_io_gpio_set_direction(rts_gpio_ircutain, GPIO_OUTPUT))
 	{
-		log_err("can not set gpio %d dir\n", IRCUR_AIN);
+		log_qcy(DEBUG_SERIOUS, "can not set gpio %d dir\n", IRCUR_AIN);
 		rts_io_gpio_free(rts_gpio_ircutain);
 		return -1;
 	}
@@ -186,13 +186,13 @@ int init_led_gpio()
 	rts_gpio_ircutbin = rts_io_gpio_request(DOMAIN_GPIO_SYSTEM, IRCUR_BIN);
 	if(!rts_gpio_ircutbin)
 	{
-		log_err("can not requset gpio num %d\n", IRCUR_BIN);
+		log_qcy(DEBUG_SERIOUS, "can not requset gpio num %d\n", IRCUR_BIN);
 		return -1;
 	}
 
 	if(rts_io_gpio_set_direction(rts_gpio_ircutbin, GPIO_OUTPUT))
 	{
-		log_err("can not set gpio %d dir\n", IRCUR_BIN);
+		log_qcy(DEBUG_SERIOUS, "can not set gpio %d dir\n", IRCUR_BIN);
 		rts_io_gpio_free(rts_gpio_ircutbin);
 		return -1;
 	}
@@ -201,13 +201,13 @@ int init_led_gpio()
 	rts_gpio_irled = rts_io_gpio_request(DOMAIN_GPIO_SYSTEM, IRLED);
 	if(!rts_gpio_irled)
 	{
-		log_err("can not requset gpio num %d\n", IRLED);
+		log_qcy(DEBUG_SERIOUS, "can not requset gpio num %d\n", IRLED);
 		return -1;
 	}
 
 	if(rts_io_gpio_set_direction(rts_gpio_irled, GPIO_OUTPUT))
 	{
-		log_err("can not set gpio %d dir\n", IRLED);
+		log_qcy(DEBUG_SERIOUS, "can not set gpio %d dir\n", IRLED);
 		rts_io_gpio_free(rts_gpio_irled);
 		return -1;
 	}
@@ -216,13 +216,13 @@ int init_led_gpio()
 	rts_gpio_motorable = rts_io_gpio_request(DOMAIN_GPIO_SYSTEM, MOTOR_595ENABLE);
 	if(!rts_gpio_motorable)
 	{
-		log_err("can not requset gpio num %d\n", MOTOR_595ENABLE);
+		log_qcy(DEBUG_SERIOUS, "can not requset gpio num %d\n", MOTOR_595ENABLE);
 		return -1;
 	}
 
 	if(rts_io_gpio_set_direction(rts_gpio_motorable, GPIO_OUTPUT))
 	{
-		log_err("can not set gpio %d dir\n", MOTOR_595ENABLE);
+		log_qcy(DEBUG_SERIOUS, "can not set gpio %d dir\n", MOTOR_595ENABLE);
 		rts_io_gpio_free(rts_gpio_motorable);
 		return -1;
 	}
@@ -257,13 +257,13 @@ int set_gpio_value(struct rts_gpio *rts_gpio, int value)
 
 	if(rts_io_gpio_set_value(rts_gpio, value))
 	{
-		log_err("set gpio failed\n");
+		log_qcy(DEBUG_SERIOUS, "set gpio failed\n");
 		rts_io_gpio_free(rts_gpio);
 		return -1;
 	}
 
 	if(rts_io_gpio_get_value(rts_gpio) != value)
-		log_err("get gpio value failed\n");
+		log_qcy(DEBUG_SERIOUS, "get gpio value failed\n");
 
 	return 0;
 }

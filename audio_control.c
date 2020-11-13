@@ -10,7 +10,9 @@
 #include "time.h"
 #include <rtsamixer.h>
 #include "../../tools/tools_interface.h"
+#include "../../manager/global_interface.h"
 #include "gpio_control_interface.h"
+#include "config.h"
 
 static int value_cur;
 static int value_input_cur;
@@ -23,7 +25,7 @@ int ctl_spk(int *para)
 	return ret;
 }
 
-int adjust_input_audio_volume(audio_info_t_m *para)
+int adjust_input_audio_volume(audio_info_t_m *para, device_config_t config_t)
 {
 	audio_info_t_m *audio_control_info;
 	int ret;
@@ -31,16 +33,16 @@ int adjust_input_audio_volume(audio_info_t_m *para)
 
 	audio_control_info = para;
 
-	log_info("volume = %d",audio_control_info->volume);
+	log_qcy(DEBUG_INFO, "volume = %d",audio_control_info->volume);
 	if ((audio_control_info->volume < 100 && audio_control_info->volume > 0) || audio_control_info->volume == -1)
 	{
 
-		log_info("type = %d",audio_control_info->type);
-		log_info("volume = %d",audio_control_info->volume);
+		log_qcy(DEBUG_INFO, "type = %d",audio_control_info->type);
+		log_qcy(DEBUG_INFO, "volume = %d",audio_control_info->volume);
 
 		ret = rts_audio_get_capture_volume(&value_input_cur);
 		if (ret) {
-			log_err("rts_audio_get_capture_volume failed");
+			log_qcy(DEBUG_SERIOUS, "rts_audio_get_capture_volume failed");
 			return -1;
 		}
 
@@ -48,59 +50,59 @@ int adjust_input_audio_volume(audio_info_t_m *para)
 		{
 			switch(audio_control_info->type){
 				case VOLUME_UP:
-					if (value_input_cur + VOLUME_STEP >= 100)
+					if (value_input_cur + config_t.volume_step >= 100)
 					{
 						value_input_cur = 90;
 					}
-					ret = rts_audio_set_capture_volume(value_input_cur + VOLUME_STEP);
+					ret = rts_audio_set_capture_volume(value_input_cur + config_t.volume_step);
 					if (ret) {
-						log_err("rts_audio_set_capture_volume failed");
+						log_qcy(DEBUG_SERIOUS, "rts_audio_set_capture_volume failed");
 						return -1;
 					}
 					ret = rts_audio_get_capture_volume(&value_t);
 					if (ret) {
-						log_err("rts_audio_get_capture_volume failed");
+						log_qcy(DEBUG_SERIOUS, "rts_audio_get_capture_volume failed");
 						return -1;
 					}
-					if (value_input_cur + VOLUME_STEP == value_t)
-						log_info("adjust  volume success");
+					if (value_input_cur + config_t.volume_step == value_t)
+						log_qcy(DEBUG_INFO, "adjust  volume success");
 					break;
 				case VOLUME_DOWN:
-					if (value_input_cur - VOLUME_STEP <= 0)
+					if (value_input_cur - config_t.volume_step <= 0)
 					{
 						value_input_cur = 10;
 					}
-					ret = rts_audio_set_capture_volume(value_input_cur - VOLUME_STEP);
+					ret = rts_audio_set_capture_volume(value_input_cur - config_t.volume_step);
 					if (ret) {
-						log_err("rts_audio_set_playback_volume failed");
+						log_qcy(DEBUG_SERIOUS, "rts_audio_set_playback_volume failed");
 						return -1;
 					}
 					ret = rts_audio_get_capture_volume(&value_t);
 					if (ret) {
-						log_err("rts_audio_get_playback_volume failed");
+						log_qcy(DEBUG_SERIOUS, "rts_audio_get_playback_volume failed");
 						return -1;
 					}
-					if (value_input_cur - VOLUME_STEP == value_t)
-						log_info("adjust volume success");
+					if (value_input_cur - config_t.volume_step == value_t)
+						log_qcy(DEBUG_INFO, "adjust volume success");
 					break;
 				case VOLUME_MUTE:
 					ret = rts_audio_capture_mute();
 					if (ret) {
-						log_err("rts_audio_capture_mute failed");
+						log_qcy(DEBUG_SERIOUS, "rts_audio_capture_mute failed");
 						return -1;
 					}
-					log_info("the current capture is mute");
+					log_qcy(DEBUG_INFO, "the current capture is mute");
 					break;
 				case VOLUME_UNMUTE:
 					ret = rts_audio_capture_unmute();
 					if (ret) {
-						log_err("rts_audio_capture_unmute  failed");
+						log_qcy(DEBUG_SERIOUS, "rts_audio_capture_unmute  failed");
 						return -1;
 					}
-					log_info("the current capture is unmute");
+					log_qcy(DEBUG_INFO, "the current capture is unmute");
 					break;
 				default :
-					log_err("invalid param");
+					log_qcy(DEBUG_SERIOUS, "invalid param");
 					break;
 			}
 		}
@@ -112,27 +114,27 @@ int adjust_input_audio_volume(audio_info_t_m *para)
 			{
 				ret = rts_audio_set_capture_volume(audio_control_info->volume);
 				if (ret) {
-					log_err("rts_audio_set_capture_volume  failed");
+					log_qcy(DEBUG_SERIOUS, "rts_audio_set_capture_volume  failed");
 					return -1;
 				}
 				ret = rts_audio_get_capture_volume(&value_input_cur);
 				if (ret) {
-					log_err("rts_audio_get_capture_volume  failed");
+					log_qcy(DEBUG_SERIOUS, "rts_audio_get_capture_volume  failed");
 					return -1;
 				}
 				if (value_input_cur == audio_control_info->volume)
-					log_info("set volume success");
+					log_qcy(DEBUG_INFO, "set volume success");
 			}
 		}
 	}
 	else {
-		log_err("invalid param");
+		log_qcy(DEBUG_SERIOUS, "invalid param");
 		return -1;
 	}
 	return 0;
 }
 
-int adjust_audio_volume(audio_info_t_m *para)
+int adjust_audio_volume(audio_info_t_m *para, device_config_t config_t)
 {
 	audio_info_t_m *audio_control_info;
 	int ret;
@@ -140,16 +142,16 @@ int adjust_audio_volume(audio_info_t_m *para)
 
 	audio_control_info = para;
 
-	//log_info("volume = %d",audio_control_info->volume);
+	//log_qcy(DEBUG_INFO, "volume = %d",audio_control_info->volume);
 	if ((audio_control_info->volume < 100 && audio_control_info->volume > 0) || audio_control_info->volume == -1)
 	{
 
-		//log_info("type = %d",audio_control_info->type);
-		//log_info("volume = %d",audio_control_info->volume);
+		//log_qcy(DEBUG_INFO, "type = %d",audio_control_info->type);
+		//log_qcy(DEBUG_INFO, "volume = %d",audio_control_info->volume);
 
 		ret = rts_audio_get_playback_volume(&value_cur);
 		if (ret) {
-			log_err("rts_audio_get_playback_volume failed");
+			log_qcy(DEBUG_SERIOUS, "rts_audio_get_playback_volume failed");
 			return -1;
 		}
 
@@ -157,59 +159,59 @@ int adjust_audio_volume(audio_info_t_m *para)
 		{
 			switch(audio_control_info->type){
 				case VOLUME_UP:
-					if (value_cur + VOLUME_STEP >= 100)
+					if (value_cur + config_t.volume_step >= 100)
 					{
 						value_cur = 90;
 					}
-					ret = rts_audio_set_playback_volume(value_cur + VOLUME_STEP);
+					ret = rts_audio_set_playback_volume(value_cur + config_t.volume_step);
 					if (ret) {
-						log_err("rts_audio_set_playback_volume failed");
+						log_qcy(DEBUG_SERIOUS, "rts_audio_set_playback_volume failed");
 						return -1;
 					}
 					ret = rts_audio_get_playback_volume(&value_t);
 					if (ret) {
-						log_err("rts_audio_get_playback_volume failed");
+						log_qcy(DEBUG_SERIOUS, "rts_audio_get_playback_volume failed");
 						return -1;
 					}
-					if (value_cur + VOLUME_STEP == value_t)
-						log_info("adjust  volume success");
+					if (value_cur + config_t.volume_step == value_t)
+						log_qcy(DEBUG_INFO, "adjust  volume success");
 					break;
 				case VOLUME_DOWN:
-					if (value_cur - VOLUME_STEP <= 0)
+					if (value_cur - config_t.volume_step <= 0)
 					{
 						value_cur = 10;
 					}
-					ret = rts_audio_set_playback_volume(value_cur - VOLUME_STEP);
+					ret = rts_audio_set_playback_volume(value_cur - config_t.volume_step);
 					if (ret) {
-						log_err("rts_audio_set_playback_volume failed");
+						log_qcy(DEBUG_SERIOUS, "rts_audio_set_playback_volume failed");
 						return -1;
 					}
 					ret = rts_audio_get_playback_volume(&value_t);
 					if (ret) {
-						log_err("rts_audio_get_playback_volume failed");
+						log_qcy(DEBUG_SERIOUS, "rts_audio_get_playback_volume failed");
 						return -1;
 					}
-					if (value_cur - VOLUME_STEP == value_t)
-						log_info("adjust volume success");
+					if (value_cur - config_t.volume_step == value_t)
+						log_qcy(DEBUG_INFO, "adjust volume success");
 					break;
 				case VOLUME_MUTE:
 					ret = rts_audio_playback_mute();
 					if (ret) {
-						log_err("rts_audio_playback_mute failed");
+						log_qcy(DEBUG_SERIOUS, "rts_audio_playback_mute failed");
 						return -1;
 					}
-					log_info("the current playback is mute");
+					log_qcy(DEBUG_INFO, "the current playback is mute");
 					break;
 				case VOLUME_UNMUTE:
 					ret = rts_audio_playback_unmute();
 					if (ret) {
-						log_err("rts_audio_playback_unmute failed");
+						log_qcy(DEBUG_SERIOUS, "rts_audio_playback_unmute failed");
 						return -1;
 					}
-					log_info("the current playback is unmute");
+					log_qcy(DEBUG_INFO, "the current playback is unmute");
 					break;
 				default :
-					log_err("invalid param");
+					log_qcy(DEBUG_SERIOUS, "invalid param");
 					break;
 			}
 		}
@@ -221,21 +223,21 @@ int adjust_audio_volume(audio_info_t_m *para)
 			{
 				ret = rts_audio_set_playback_volume(audio_control_info->volume);
 				if (ret) {
-					log_err("rts_audio_set_playback_volume failed");
+					log_qcy(DEBUG_SERIOUS, "rts_audio_set_playback_volume failed");
 					return -1;
 				}
 				ret = rts_audio_get_playback_volume(&value_cur);
 				if (ret) {
-					log_err("rts_audio_get_playback_volume failed");
+					log_qcy(DEBUG_SERIOUS, "rts_audio_get_playback_volume failed");
 					return -1;
 				}
 				if (value_cur == audio_control_info->volume)
-					log_info("set volume success");
+					log_qcy(DEBUG_INFO, "set volume success");
 			}
 		}
 	}
 	else {
-		log_err("invalid param");
+		log_qcy(DEBUG_SERIOUS, "invalid param");
 		return -1;
 	}
 	return 0;

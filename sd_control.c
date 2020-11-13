@@ -14,6 +14,7 @@
 #include "../../tools/tools_interface.h"
 #include "sd_control.h"
 #include "device_interface.h"
+#include "config.h"
 
 static int get_sd_plug_status();
 static int get_sd_block_mountpath(char *block_path_t, char *mountpath_t);
@@ -21,7 +22,7 @@ static int exec_t(char *cmd);
 static void *format_fun(void *arg);
 static int get_rule(char *block_path, char *mountpath, char *src);
 static int get_storage_info(char * mountpoint, space_info_t *info);
-static int get_sd_status();
+static int get_sd_status(device_config_t config_t);
 static bool sd_format_status_t = false;
 
 
@@ -33,7 +34,7 @@ static int get_storage_info(char * mountpoint, space_info_t *info)
         return -1;
 
     if (statfs(mountpoint, &statFS) == -1){
-        log_err("statfs failed for path->[%s]\n", mountpoint);
+        log_qcy(DEBUG_SERIOUS, "statfs failed for path->[%s]\n", mountpoint);
         return (-1);
     }
 
@@ -43,7 +44,7 @@ static int get_storage_info(char * mountpoint, space_info_t *info)
     return 0;
 }
 
-static int get_sd_status()
+static int get_sd_status(device_config_t config_t)
 {
 	int ret = 0;
 	int sd_status = 0;
@@ -73,23 +74,23 @@ static int get_sd_status()
 	return ret;
 }
 
-int get_sd_info(void **para)
+int get_sd_info(void **para, device_config_t config_t)
 {
     int ret;
     struct sd_info_ack_t sd_info;
     struct space_info_t space_info_t;
 
-    sd_info.plug = get_sd_status();
+    sd_info.plug = get_sd_status(config_t);
     if(sd_info.plug != SD_STATUS_PLUG)
     {
-    	log_err("can not find sd card\n");
+    	log_qcy(DEBUG_SERIOUS, "can not find sd card\n");
     	return -1;
     }
 
     ret = get_storage_info(SD_MOUNT_PATH, &space_info_t);
     if(ret)
     {
-        log_err("set_storage_info fail\n");
+        log_qcy(DEBUG_SERIOUS, "set_storage_info fail\n");
         return -1;
     }
 
@@ -99,7 +100,7 @@ int get_sd_info(void **para)
 
     *para = calloc( sizeof(sd_info_ack_t), 1);
     if( *para == NULL ) {
-        log_err("memory allocation failed");
+        log_qcy(DEBUG_SERIOUS, "memory allocation failed");
         return -1;
     }
 
@@ -124,7 +125,7 @@ int umount_sd()
 		ret = get_sd_block_mountpath(block_path, mountpath);
 		if(ret)
 		{
-			log_err("get_sd_block_mountpath prase failed\n");
+			log_qcy(DEBUG_SERIOUS, "get_sd_block_mountpath prase failed\n");
 			return -1;
 		}
 
@@ -133,7 +134,7 @@ int umount_sd()
 			ret = umount(mountpath);
 			if(ret)
 			{
-				log_err("umount failed\n");
+				log_qcy(DEBUG_SERIOUS, "umount failed\n");
 				ret = -1;
 			}
 		}
@@ -152,12 +153,12 @@ static int get_sd_plug_status()
 
     fp = fopen(SD_PLUG_PATH, "r");
     if (fp == NULL) {
-        log_err("fopen: fail\n");
+        log_qcy(DEBUG_SERIOUS, "fopen: fail\n");
         return -1;
     }
 
     if (fread(data, 1, sizeof(data), fp) == -1) {
-        log_err("fread: fail\n");
+        log_qcy(DEBUG_SERIOUS, "fread: fail\n");
         fclose(fp);
         return -1;
     }
@@ -209,12 +210,12 @@ static int get_sd_block_mountpath(char *block_path_t, char *mountpath_t)
 
     fp = fopen(MOUNT_PROC_PATH, "r");
     if (fp == NULL) {
-        log_err("fopen: fail\n");
+        log_qcy(DEBUG_SERIOUS, "fopen: fail\n");
         return -1;
     }
 
     if (fread(data, 1, sizeof(data), fp) == -1) {
-        log_err("fread: fail\n");
+        log_qcy(DEBUG_SERIOUS, "fread: fail\n");
         fclose(fp);
         return -1;
     }
@@ -225,7 +226,7 @@ static int get_sd_block_mountpath(char *block_path_t, char *mountpath_t)
     mount_rule = strstr(data, "/dev/mmcblk");
     if(get_rule(block_path, mountpath, mount_rule))
     {
-        log_err("can not prase rule\n");
+        log_qcy(DEBUG_SERIOUS, "can not prase rule\n");
         return -1;
     }
 
@@ -246,7 +247,7 @@ static int exec_t(char *cmd)
 
     if(NULL == (fstream = popen(cmd,"r")))
     {
-        log_err("execute command failed, cmd = %s\n", cmd);
+        log_qcy(DEBUG_SERIOUS, "execute command failed, cmd = %s\n", cmd);
         return -1;
     }
 
@@ -278,14 +279,14 @@ void *format_fun(void *arg)
     ret = get_sd_block_mountpath(block_path, mountpath);
     if(ret)
     {
-        log_err("get_sd_block_mountpath prase failed\n");
+        log_qcy(DEBUG_SERIOUS, "get_sd_block_mountpath prase failed\n");
         goto err;
     }
 
     ret = umount(mountpath);
     if(ret)
     {
-        log_err("umount failed\n");
+        log_qcy(DEBUG_SERIOUS, "umount failed\n");
         goto err;
     }
 
@@ -294,7 +295,7 @@ void *format_fun(void *arg)
     ret = exec_t(cmd);
     if(ret)
     {
-    	log_err("exec_t error");
+    	log_qcy(DEBUG_SERIOUS, "exec_t error");
     	//if exec failed,mount the original
     	ret = mount(block_path, mountpath, "vfat", 0, NULL);
     	goto err;
@@ -303,7 +304,7 @@ void *format_fun(void *arg)
     ret = mount(block_path, mountpath, "vfat", 0, NULL);
     if(ret)
     {
-        log_err("mount failed\n");
+        log_qcy(DEBUG_SERIOUS, "mount failed\n");
         goto err;
     }
 
@@ -333,12 +334,12 @@ int format_sd()
     {
     	sd_format_status_t = true;
         if ((ret = pthread_create(&format_tid, NULL, format_fun, NULL))) {
-        	log_err("create format thread failed, ret = %d\n", ret);
+        	log_qcy(DEBUG_SERIOUS, "create format thread failed, ret = %d\n", ret);
         	return -1;
         }
 
     } else {
-    	log_err("can not find sd card\n");
+    	log_qcy(DEBUG_SERIOUS, "can not find sd card\n");
 	}
 
     return 0;

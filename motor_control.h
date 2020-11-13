@@ -11,7 +11,7 @@
 /*
  * header
  */
-
+#include "config.h"
 /*
  * define
  */
@@ -19,7 +19,7 @@
 #define MOTOR_Y			2
 #define MOTOR_BOTH		3
 
-#define MOTOR_STEP		150
+//#define MOTOR_STEP		150
 
 #define DIR_NONE		0
 //for MOTOR_Y
@@ -36,8 +36,8 @@
 
 
 #define SPEED_NORMAL	2
-#define SPEED_LOW		4
-#define SPEED_HIGH		1
+#define SPEED_LOW		1
+#define SPEED_HIGH		4
 
 
 enum motor_status {
@@ -81,7 +81,7 @@ typedef struct ptzctrl_info {
  * function
  */
 int init_motor();
-int control_motor(int x_y, int dir, int speed);
+int control_motor(int x_y, int dir, device_config_t config_t);
 int motor_reset();
 void motor_release();
 int motor_auto_move();
