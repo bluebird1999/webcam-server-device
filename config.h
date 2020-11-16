@@ -25,6 +25,7 @@
 typedef struct device_config_t {
 	unsigned int			volume_step;
 	unsigned int			day_night_lim;
+	unsigned int			motor_enable;
 	unsigned int			motor_step;
 	unsigned int			motor_speed;
 	char					user_mount_path[64];

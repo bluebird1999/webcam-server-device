@@ -435,7 +435,9 @@ static void server_thread_termination(void)
 static int server_release(void)
 {
 	uninit_led_gpio();
-	motor_release();
+
+	if(device_config_.motor_enable)
+		motor_release();
 	return 0;
 }
 
@@ -711,11 +713,14 @@ static int server_setup(void)
 		goto err;
 	}
 
-    if ((ret = pthread_create(&motor_tid, NULL, motor_init_func, NULL))) {
-    	log_qcy(DEBUG_SERIOUS, "create motor init thread failed, ret=%d\n", ret);
-		ret = -1;
-		goto err;
-    }
+	if(device_config_.motor_enable)
+	{
+		if ((ret = pthread_create(&motor_tid, NULL, motor_init_func, NULL))) {
+			log_qcy(DEBUG_SERIOUS, "create motor init thread failed, ret=%d\n", ret);
+			ret = -1;
+			goto err;
+		}
+	}
 
 	server_set_status(STATUS_TYPE_STATUS, STATUS_IDLE);
 	return ret;

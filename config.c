@@ -14,7 +14,8 @@
 #include <malloc.h>
 //program header
 #include "../../tools/tools_interface.h"
-#include "../../manager/manager_interface.h"
+//#include "../../manager/manager_interface.h"
+#include "../../manager/global_interface.h"
 //server header
 #include "config.h"
 
@@ -27,6 +28,7 @@ static device_config_t			device_config;
 static config_map_t device_config_map[] = {
 	{"volume_step",     			&(device_config.volume_step),      			cfg_u32, 		"10",0,0,100,},
 	{"day_night_lim",     			&(device_config.day_night_lim),      		cfg_u32, 		"3000",0,0,3100,},
+	{"motor_enable",      			&(device_config.motor_enable),       		cfg_u32,		"1",0,0,1,},
 	{"motor_step",      			&(device_config.motor_step),       			cfg_u32,		"150",0,0,500,},
 	{"motor_speed",      			&(device_config.motor_speed),   			cfg_u32,		"1",0,0,4,},
 	{"user_mount_path",     		&(device_config.user_mount_path),      		cfg_string, 	"/opt",0,0,10,},
