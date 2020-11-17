@@ -438,6 +438,7 @@ static int server_release(void)
 
 	if(device_config_.motor_enable)
 		motor_release();
+	memset(&info,0,sizeof(server_info_t));
 	return 0;
 }
 
