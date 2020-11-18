@@ -38,8 +38,8 @@ static int get_storage_info(char * mountpoint, space_info_t *info)
         return (-1);
     }
 
-    info->totalBytes = (unsigned int)(statFS.f_blocks * (unsigned int)statFS.f_frsize / 1024);
-    info->freeBytes = (unsigned int)(statFS.f_bfree * (unsigned int)statFS.f_frsize / 1024);
+    info->totalBytes = (unsigned int)((long long)statFS.f_blocks * (long long)statFS.f_frsize / 1024);
+    info->freeBytes = (unsigned int)((long long)statFS.f_bfree * (long long)statFS.f_frsize / 1024);
     info->usedBytes = (unsigned int)(info->totalBytes - info->freeBytes);
     return 0;
 }
