@@ -393,6 +393,7 @@ static int send_message(int receiver, message_t *msg)
 	case SERVER_KERNEL:
 		break;
 	case SERVER_REALTEK:
+		st = server_realtek_message(msg);
 		break;
 	case SERVER_MIIO:
 		st = server_miio_message(msg);

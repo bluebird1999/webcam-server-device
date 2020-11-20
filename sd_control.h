@@ -22,6 +22,8 @@
 #define VFAT_FORMAT_TOOL_PATH 	"/sbin/mkfs.vfat"
 #define MOUNT_PROC_PATH 		"/proc/mounts"
 #define SD_PLUG_PATH 			"/sys/devices/platform/ocp/18300000.sdhc/cd"
+#define MMC_BLOCK_PATH			"/dev/mmcblk0p1"
+#define MMC_BLOCK_PATH_PAR		"/dev/mmcblk0"
 
 #define FREE_T(x) {\
 	free(x);\

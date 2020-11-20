@@ -16,7 +16,7 @@
 /*
  * define
  */
-#define		SERVER_DEVICE_VERSION_STRING		"alpha-4.0.3"
+#define		SERVER_DEVICE_VERSION_STRING		"alpha-4.0.4"
 
 //control
 #define		DEVICE_CTRL_SD_INFO					0x0001
@@ -90,7 +90,7 @@ enum sd_status_t {
 	SD_STATUS_NO,
 	SD_STATUS_PLUG,
 	SD_STATUS_ERR,
-	SD_STATUS_UNPLUG,
+	SD_STATUS_EJECTED,
 	SD_STATUS_FMT,
 };
 

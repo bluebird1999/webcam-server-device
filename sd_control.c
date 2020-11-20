@@ -11,10 +11,16 @@
 #include <string.h>
 #include <stdbool.h>
 #include <unistd.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include "../../tools/tools_interface.h"
 #include "sd_control.h"
 #include "device_interface.h"
 #include "config.h"
+
+
+
 
 static int get_sd_plug_status();
 static int get_sd_block_mountpath(char *block_path_t, char *mountpath_t);
@@ -23,6 +29,11 @@ static void *format_fun(void *arg);
 static int get_rule(char *block_path, char *mountpath, char *src);
 static int get_storage_info(char * mountpoint, space_info_t *info);
 static int get_sd_status(device_config_t config_t);
+static int is_mounted(char *mount_path);
+static int sd_getFSType_supp(char *devPath);
+
+
+
 static bool sd_format_status_t = false;
 
 
@@ -44,6 +55,77 @@ static int get_storage_info(char * mountpoint, space_info_t *info)
     return 0;
 }
 
+static int sd_getFSType_supp(char *devPath)
+{
+    int fd = 0, ret;
+    char data[256] = {0};
+
+    if(!devPath)
+    {
+        log_qcy(DEBUG_SERIOUS,  "device is NULL!\n");
+        return -1;
+    }
+
+    //read the tag data for exfat/fat32
+    fd = open(devPath, O_RDONLY);
+    if(!fd)
+    {
+        log_qcy(DEBUG_SERIOUS,  "Open device failed!\n");
+        return -1;
+    }
+    ret = read(fd, data, sizeof(data));
+    close(fd);
+    if(!ret)
+    {
+        log_qcy(DEBUG_SERIOUS,  "read device file failed!\n");
+        return -1;
+    }
+
+    if(!strncmp((data+0x52), "FAT32", strlen("FAT32"))) //th offset with 0x52 is fat32 tag;
+    {
+        log_qcy(DEBUG_VERBOSE,  "dev:%s, filesystem:fat32!\n", devPath);
+        ret = 0;
+    }
+    else if(!strncmp((data+0x3), "EXFAT", strlen("EXFAT"))) //the offset with 0x3 is exfat tag;
+    {
+        log_qcy(DEBUG_VERBOSE,  "dev:%s, filesystem:exfat!\n", devPath);
+        ret = 0;
+    }
+    else
+    {
+        log_qcy(DEBUG_SERIOUS,  "dev:%s, Unknown filesystem type!\n", devPath);
+        ret = -1;
+    }
+
+    return ret;
+}
+
+static int is_mounted(char *mount_path)
+{
+	FILE *fp = NULL;
+	char data[SIZE1024] = {0};
+
+    fp = fopen(MOUNT_PROC_PATH, "r");
+    if (fp == NULL) {
+        log_qcy(DEBUG_SERIOUS, "fopen: fail\n");
+        return -1;
+    }
+
+    if (fread(data, 1, sizeof(data), fp) == -1) {
+        log_qcy(DEBUG_SERIOUS, "fread: fail\n");
+        fclose(fp);
+        return -1;
+    }
+
+    fflush(fp);
+    fclose(fp);
+
+    if(strstr(data, mount_path))
+    	return 1;
+
+	return 0;
+}
+
 static int get_sd_status(device_config_t config_t)
 {
 	int ret = 0;
@@ -59,14 +141,17 @@ static int get_sd_status(device_config_t config_t)
 		{
 			sd_status = SD_STATUS_FMT;
 		}
-		else if(access(SD_MOUNT_PATH, R_OK))
+		else if(sd_getFSType_supp(MMC_BLOCK_PATH))
 		{
-			sd_status = SD_STATUS_UNPLUG;
+			sd_status = SD_STATUS_ERR;
+		}
+		else if(is_mounted(SD_MOUNT_PATH))
+		{
+			sd_status = SD_STATUS_PLUG;
 		}
 		else
 		{
-			if(statfs(SD_MOUNT_PATH, &statFS) == -1)
-				sd_status = SD_STATUS_ERR;
+			sd_status = SD_STATUS_EJECTED;
 		}
 	}
 
@@ -83,8 +168,11 @@ int get_sd_info(void **para, device_config_t config_t)
     sd_info.plug = get_sd_status(config_t);
     if(sd_info.plug != SD_STATUS_PLUG)
     {
-    	log_qcy(DEBUG_SERIOUS, "can not find sd card\n");
-    	return -1;
+    	log_qcy(DEBUG_VERBOSE, "can not find sd card\n");
+        sd_info.totalBytes = 0;
+        sd_info.usedBytes = 0;
+        sd_info.freeBytes = 0;
+    	goto ejected_or_no;
     }
 
     ret = get_storage_info(SD_MOUNT_PATH, &space_info_t);
@@ -97,6 +185,8 @@ int get_sd_info(void **para, device_config_t config_t)
     sd_info.totalBytes = space_info_t.totalBytes;
     sd_info.usedBytes = space_info_t.usedBytes;
     sd_info.freeBytes = space_info_t.freeBytes;
+
+ejected_or_no:
 
     *para = calloc( sizeof(sd_info_ack_t), 1);
     if( *para == NULL ) {
@@ -163,7 +253,7 @@ static int get_sd_plug_status()
         return -1;
     }
 
-    log_info("get sd status = %c\n", data[0]);
+    log_qcy(DEBUG_VERBOSE, "get sd status = %c\n", data[0]);
 
     fflush(fp);
     fclose(fp);
@@ -204,6 +294,7 @@ static int get_sd_block_mountpath(char *block_path_t, char *mountpath_t)
     char *mount_rule = NULL;
     char block_path[SIZE] = {0};
     char mountpath[SIZE] = {0};
+    int ret = 0;
 
     if(block_path_t == NULL || mountpath_t == NULL)
         return -1;
@@ -226,14 +317,23 @@ static int get_sd_block_mountpath(char *block_path_t, char *mountpath_t)
     mount_rule = strstr(data, "/dev/mmcblk");
     if(get_rule(block_path, mountpath, mount_rule))
     {
-        log_qcy(DEBUG_SERIOUS, "can not prase rule\n");
-        return -1;
+        log_qcy(DEBUG_VERBOSE, "can not prase rule\n");
+        if(!access(MMC_BLOCK_PATH, R_OK))
+        	memcpy(block_path_t, MMC_BLOCK_PATH, strlen(MMC_BLOCK_PATH));
+        else if(!access(MMC_BLOCK_PATH_PAR, R_OK))
+        	memcpy(block_path_t, MMC_BLOCK_PATH_PAR, strlen(MMC_BLOCK_PATH_PAR));
+
+        memcpy(mountpath_t, SD_MOUNT_PATH, strlen(SD_MOUNT_PATH));
+
+        ret = 1;
+    } else {
+        memcpy(block_path_t, block_path, strlen(block_path));
+        memcpy(mountpath_t, mountpath, strlen(mountpath));
+
+        ret = 2;
     }
 
-    memcpy(block_path_t, block_path, SIZE);
-    memcpy(mountpath_t, mountpath, SIZE);
-
-    return 0;
+    return ret;
 }
 
 static int exec_t(char *cmd)
@@ -270,27 +370,32 @@ void *format_fun(void *arg)
     char *block_path;
     char *mountpath;
     int ret;
-    block_path = malloc(SIZE);
-    mountpath = malloc(SIZE);
+    block_path = calloc(1, SIZE);
+    mountpath = calloc(1, SIZE);
 
 	misc_set_thread_name("format_sd_thread");
     pthread_detach(pthread_self());
 
     ret = get_sd_block_mountpath(block_path, mountpath);
-    if(ret)
+    if(ret < 0)
     {
         log_qcy(DEBUG_SERIOUS, "get_sd_block_mountpath prase failed\n");
         goto err;
     }
 
-    ret = umount(mountpath);
-    if(ret)
+    if(ret == 2)
     {
-        log_qcy(DEBUG_SERIOUS, "umount failed\n");
-        goto err;
+    	ret = umount(mountpath);
+    	if(ret)
+    	{
+    		log_qcy(DEBUG_SERIOUS, "umount failed\n");
+    		goto err;
+    	}
     }
 
     snprintf(cmd, SIZE, "%s %s",VFAT_FORMAT_TOOL_PATH, block_path);
+
+    log_qcy(DEBUG_VERBOSE, "cmd = %s \n", cmd);
 
     ret = exec_t(cmd);
     if(ret)
