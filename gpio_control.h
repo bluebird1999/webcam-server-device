@@ -11,6 +11,7 @@
 /*
  * header
  */
+#include "config.h"
 
 /*
  * define
@@ -26,7 +27,7 @@
  * function
  */
 
-int init_led_gpio();
+int init_led_gpio(device_config_t *rconfig);
 int uninit_led_gpio();
 int set_blue_led_on();
 int set_blue_led_off();

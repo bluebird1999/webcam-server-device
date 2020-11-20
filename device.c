@@ -707,7 +707,7 @@ static int server_setup(void)
 		goto err;
 	}
 
-	ret = init_led_gpio();
+	ret = init_led_gpio(&device_config_);
 	if(ret)
 	{
 		log_qcy(DEBUG_SERIOUS, "init_led_gpio init failed");

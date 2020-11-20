@@ -28,6 +28,13 @@ typedef struct device_config_t {
 	unsigned int			motor_enable;
 	unsigned int			motor_step;
 	unsigned int			motor_speed;
+	unsigned int			led1_gpio;
+	unsigned int			led2_gpio;
+	unsigned int			spk_gpio;
+	unsigned int			ircut_ain;
+	unsigned int			ircut_bin;
+	unsigned int			irled;
+	unsigned int			motor_595enable;
 	char					user_mount_path[64];
 	char					sd_mount_path[64];
 } device_config_t;
