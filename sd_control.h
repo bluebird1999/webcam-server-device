@@ -49,5 +49,7 @@ int get_sd_info(void **para, device_config_t config_t);
 //int get_storage_info(char * mountpoint, space_info_t *sd_info);
 int format_sd();
 int umount_sd();
+int is_mounted(char *mount_path);
+int get_sd_plug_status();
 
 #endif /* SD_CONTRIL_H_ */

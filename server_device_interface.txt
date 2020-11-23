@@ -143,6 +143,9 @@ typedef struct audio_info_t {
 #define		MSG_DEVICE_CTRL_DIRECT_ACK			MSG_DEVICE_BASE | 0x1012
 #define		MSG_DEVICE_ACTION					MSG_DEVICE_BASE | 0x0020
 #define		MSG_DEVICE_ACTION_ACK				MSG_DEVICE_BASE | 0x1020
+#define		MSG_DEVICE_SD_INSERT				MSG_DEVICE_BASE | 0x0013
+#define		MSG_DEVICE_SD_EJECTED				MSG_DEVICE_BASE | 0x0014
+#define		MSG_DEVICE_SD_CAP_ALARM				MSG_DEVICE_BASE | 0x0015
 --------------------------------------------------------------------------------
 		MSG_DEVICE_SIGINT
 消息说明：		服务器发送SIGINT系统响应到MANAGER
@@ -200,4 +203,31 @@ typedef struct audio_info_t {
 传回参数：
 	result:		int						0:成功，其他失败
 	arg_pass:	message_arg_t			回传参数，原样拷贝
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+		MSG_DEVICE_SD_INSERT
+消息说明：			device主动发出，sd插入通知
+发送服务器：		DEVICE
+接受服务器：		所有服务器
+传入参数：
+	message:		MSG_DEVICE_SD_INSERT
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+		MSG_DEVICE_SD_EJECTED
+消息说明：			device主动发出，sd拔出通知
+发送服务器：		DEVICE
+接受服务器：		所有服务器
+传入参数：
+	message:		MSG_DEVICE_SD_EJECTED
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+		MSG_DEVICE_SD_CAP_ALARM
+消息说明：			device主动发出，sd可用容量降到阈值以下
+发送服务器：		DEVICE
+接受服务器：		所有服务器
+传入参数：
+	message:		MSG_DEVICE_SD_CAP_ALARM
 --------------------------------------------------------------------------------

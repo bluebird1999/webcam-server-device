@@ -19,17 +19,12 @@
 #include "device_interface.h"
 #include "config.h"
 
-
-
-
-static int get_sd_plug_status();
 static int get_sd_block_mountpath(char *block_path_t, char *mountpath_t);
 static int exec_t(char *cmd);
 static void *format_fun(void *arg);
 static int get_rule(char *block_path, char *mountpath, char *src);
 static int get_storage_info(char * mountpoint, space_info_t *info);
 static int get_sd_status(device_config_t config_t);
-static int is_mounted(char *mount_path);
 static int sd_getFSType_supp(char *devPath);
 
 
@@ -100,7 +95,7 @@ static int sd_getFSType_supp(char *devPath)
     return ret;
 }
 
-static int is_mounted(char *mount_path)
+int is_mounted(char *mount_path)
 {
 	FILE *fp = NULL;
 	char data[SIZE1024] = {0};
@@ -236,7 +231,7 @@ int umount_sd()
 	return ret;
 }
 
-static int get_sd_plug_status()
+int get_sd_plug_status()
 {
     FILE *fp = NULL;
     char data[SIZE] = {0};

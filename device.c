@@ -14,6 +14,12 @@
 #include <signal.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/statfs.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/select.h>
+#include <linux/netlink.h>
 #include <rtscamkit.h>
 #include <rtsavapi.h>
 #include <rtsvideo.h>
@@ -40,6 +46,7 @@
  * static
  */
 //variable
+static int 					sd_card_insert;
 static device_config_t		device_config_;
 static server_info_t 		info;
 static message_buffer_t		message;
@@ -93,6 +100,7 @@ static int iot_ctrl_motor(int x_y, int dir);
 static int iot_ctrl_motor_reset();
 static int iot_umount_sd();
 static void *motor_init_func(void *arg);
+static void *storage_detect_func(void *arg);
 static void *daynight_mode_func(void *arg);
 static void *motor_reset_func(void *arg);
 static char *get_string_name(int i);
@@ -391,6 +399,7 @@ static int send_message(int receiver, message_t *msg)
 	case SERVER_DEVICE:
 		break;
 	case SERVER_KERNEL:
+		st = server_kernel_message(msg);
 		break;
 	case SERVER_REALTEK:
 		st = server_realtek_message(msg);
@@ -410,6 +419,7 @@ static int send_message(int receiver, message_t *msg)
 		st = server_recorder_message(msg);
 		break;
 	case SERVER_PLAYER:
+		st = server_player_message(msg);
 		break;
 	case SERVER_MANAGER:
 		st = manager_message(msg);
@@ -626,6 +636,134 @@ static int server_wait(void)
 	return ret;
 }
 
+static void *storage_detect_func(void *arg)
+{
+	int i;
+	fd_set fds;
+	int ret = 0;
+	message_t msg;
+	char *ptr = NULL;
+	server_status_t st;
+	struct statfs statFS;
+	struct sockaddr_nl snl;
+	unsigned long freeBytes;
+	char buf[SIZE1024] = {0};
+	struct timeval timeout={0,1};
+
+    signal(SIGINT, (__sighandler_t)server_thread_termination);
+    signal(SIGTERM, (__sighandler_t)server_thread_termination);
+	misc_set_thread_name("storage_detect_thread");
+    pthread_detach(pthread_self());
+
+    sd_card_insert = get_sd_plug_status();
+    memset(&snl, 0, sizeof(struct sockaddr_nl));
+
+    msg_init(&msg);
+    msg.sender = msg.receiver = SERVER_DEVICE;
+
+    snl.nl_family = AF_NETLINK;
+	snl.nl_pid = getpid();
+	snl.nl_groups = 1;
+	int hotplug_sock = socket(PF_NETLINK, SOCK_DGRAM, NETLINK_KOBJECT_UEVENT);
+	if (hotplug_sock == -1) {
+		log_qcy(DEBUG_SERIOUS, "error getting socket");
+		goto error;
+	}
+
+    ret = bind(hotplug_sock, (struct sockaddr *) &snl, sizeof(struct sockaddr_nl));
+    if (ret < 0) {
+    	log_qcy(DEBUG_SERIOUS, "system_hotplug_recelve bind failed");
+        goto error;
+    }
+
+    while(!server_get_status(STATUS_TYPE_EXIT))
+    {
+		//exit logic
+		st = server_get_status(STATUS_TYPE_STATUS);
+    	if( st != STATUS_RUN ) {
+			if ( st == STATUS_IDLE || st == STATUS_SETUP || st == STATUS_START)
+				continue;
+			else
+				break;
+		}
+
+    	FD_ZERO(&fds);
+    	FD_SET(hotplug_sock,&fds);
+    	timeout.tv_sec=1;
+    	timeout.tv_usec=0;
+
+        switch(select(hotplug_sock + 1,&fds,NULL,NULL,&timeout))
+        {
+            case -1:
+            	log_qcy(DEBUG_SERIOUS, "select error");
+                goto error;
+                break;
+            case 0:
+                if(sd_card_insert)
+                {
+                	if(is_mounted(device_config_.sd_mount_path) == 1)
+                	{
+                	    if (statfs(device_config_.sd_mount_path, &statFS) == -1){
+                	        log_qcy(DEBUG_SERIOUS, "statfs failed for path->[%s]\n", device_config_.sd_mount_path);
+                	        goto error;
+                	    }
+                	    freeBytes = (unsigned int)((long long)statFS.f_bfree * (long long)statFS.f_frsize / 1024);
+                	    if(freeBytes / 1024 < device_config_.storage_detect_lim)
+                	    {
+                	    	msg.message = MSG_DEVICE_SD_CAP_ALARM;
+                			for(i=0;i<MAX_SERVER;i++) {
+                				if( misc_get_bit( device_config_.storage_detect_notify, i) ) {
+                					log_qcy(DEBUG_VERBOSE, "lim send to ->[%d]\n",i);
+                					send_message(i, &msg);
+                				}
+                			}
+                	    }
+                	}
+                }
+                sleep(4);
+                break;
+            default:
+                if(FD_ISSET(hotplug_sock,&fds))
+                {
+                    ret = recv(hotplug_sock, buf, SIZE1024 , 0);
+                    if(ret > 0)
+                    {
+                        ptr = strstr(buf, "add@/devices/platform/ocp/18300000.sdhc");
+                        if(ptr != NULL)
+                        {
+                        	sd_card_insert = 1;
+                        	msg.message = MSG_DEVICE_SD_INSERT;
+                        	for(i=0;i<MAX_SERVER;i++) {
+								if( misc_get_bit( device_config_.storage_detect_notify, i) ) {
+									log_qcy(DEBUG_VERBOSE, "insert send to ->[%d]\n",i);
+									send_message(i, &msg);
+								}
+							}
+                        }
+                        ptr = strstr(buf, "remove@/devices/platform/ocp/18300000.sdhc");
+                        if(ptr != NULL)
+                        {
+                        	sd_card_insert = 0;
+                        	msg.message = MSG_DEVICE_SD_EJECTED;
+                        	for(i=0;i<MAX_SERVER;i++) {
+								if( misc_get_bit( device_config_.storage_detect_notify, i) ) {
+									log_qcy(DEBUG_VERBOSE, "remove send to ->[%d]\n",i);
+									send_message(i, &msg);
+								}
+							}
+                        }
+                    }
+                }
+                break;
+        }
+    }
+
+error:
+	close(hotplug_sock);
+	hotplug_sock = -1;
+	pthread_exit(0);
+}
+
 static void *motor_init_func(void *arg)
 {
 	int ret = 0;
@@ -689,6 +827,7 @@ static int server_setup(void)
 {
 	int ret = 0;
 	static pthread_t motor_tid = 0;
+	static pthread_t storage_detect_tid = 0;
 	rts_set_log_mask(RTS_LOG_MASK_CONS);
 
 	ret = config_device_read(&device_config_);
@@ -719,6 +858,15 @@ static int server_setup(void)
 	{
 		if ((ret = pthread_create(&motor_tid, NULL, motor_init_func, NULL))) {
 			log_qcy(DEBUG_SERIOUS, "create motor init thread failed, ret=%d\n", ret);
+			ret = -1;
+			goto err;
+		}
+	}
+
+	if(device_config_.storage_detect)
+	{
+		if ((ret = pthread_create(&storage_detect_tid, NULL, storage_detect_func, NULL))) {
+			log_qcy(DEBUG_SERIOUS, "create storage_detect_func thread failed, ret=%d\n", ret);
 			ret = -1;
 			goto err;
 		}
