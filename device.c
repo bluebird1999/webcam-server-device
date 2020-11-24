@@ -786,12 +786,20 @@ static void *daynight_mode_func(void *arg)
 {
 	int ret = 0;
 	int value = 0;
+	int lim_value = 0;
 	server_status_t st;
 
     signal(SIGINT, (__sighandler_t)server_thread_termination);
     signal(SIGTERM, (__sighandler_t)server_thread_termination);
 	misc_set_thread_name("daynight_mode_thread");
     pthread_detach(pthread_self());
+
+	if(device_config_.soft_hard_ldr)
+	{
+		lim_value = 1;
+	} else {
+		lim_value = device_config_.day_night_lim;
+	}
 
     while(!server_get_status(STATUS_TYPE_EXIT))
     {
@@ -803,8 +811,16 @@ static void *daynight_mode_func(void *arg)
 			else
 				break;
 		}
-    	value = rts_io_adc_get_value(ADC_CHANNEL_0);
-    	if(value > device_config_.day_night_lim)
+
+    	if(device_config_.soft_hard_ldr)
+    	{
+    		value = rts_av_get_isp_daynight_statis();
+    	} else {
+    		value = rts_io_adc_get_value(ADC_CHANNEL_0);
+    	}
+
+    	log_qcy(DEBUG_VERBOSE, "day night mode value = %d", value);
+    	if(value >= lim_value)
     	{
     		ret = ctl_ircut(GPIO_ON);
     		ret |= ctl_irled(GPIO_OFF);

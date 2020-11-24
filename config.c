@@ -27,6 +27,7 @@ static pthread_rwlock_t			lock;
 static device_config_t			device_config;
 static config_map_t device_config_map[] = {
 	{"volume_step",     			&(device_config.volume_step),      			cfg_u32, 		"10",0,0,100,},
+	{"soft_hard_ldr",     			&(device_config.soft_hard_ldr),      		cfg_u32, 		"1",0,0,1,},
 	{"day_night_lim",     			&(device_config.day_night_lim),      		cfg_u32, 		"3000",0,0,3100,},
 	{"motor_enable",      			&(device_config.motor_enable),       		cfg_u32,		"1",0,0,1,},
 	{"storage_detect",      		&(device_config.storage_detect),       		cfg_u32,		"1",0,0,1,},

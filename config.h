@@ -24,6 +24,7 @@
  */
 typedef struct device_config_t {
 	unsigned int			volume_step;
+	unsigned int			soft_hard_ldr;
 	unsigned int			day_night_lim;
 	unsigned int			storage_detect;
 	unsigned int			storage_detect_notify;
