@@ -91,6 +91,8 @@ static int send_message(int receiver, message_t *msg);
 //specific
 static int iot_get_sd_info(device_iot_config_t *tmp);
 static int iot_get_part_info(device_iot_config_t *tmp);
+static int iot_get_part_user_info(device_iot_config_t *tmp);
+static int iot_get_led_status(device_iot_config_t *tmp);
 static int iot_adjust_volume(void* arg);
 static int iot_ctrl_led(void* arg);
 static int iot_ctrl_amplifier(void* arg);
@@ -104,6 +106,7 @@ static void *storage_detect_func(void *arg);
 static void *daynight_mode_func(void *arg);
 static void *motor_reset_func(void *arg);
 static char *get_string_name(int i);
+static int video_isp_set_attr(unsigned int id, int value);
 /*
  * %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
  * %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -300,6 +303,26 @@ static int iot_adjust_volume(void* arg)
 err:
 	log_qcy(DEBUG_SERIOUS, "invalid parameters\n");
 	return ret;
+}
+
+static int iot_get_led_status(device_iot_config_t *tmp)
+{
+	int ret = 0;
+
+	if(tmp == NULL)
+		return -1;
+
+	memset(tmp,0,sizeof(device_iot_config_t));
+
+	ret = get_led_status(LED1);
+	if(ret > 0)
+		tmp->led1_onoff = ret;
+
+	ret = get_led_status(LED2);
+	if(ret > 0)
+		tmp->led2_onoff = ret;
+
+	return (ret == -1 ) ? -1 : 0;
 }
 
 static int iot_get_part_user_info(device_iot_config_t *tmp)
@@ -531,6 +554,10 @@ static int server_message_proc(void)
 			ret = iot_get_part_user_info(&tmp);
 			send_iot_ack(&msg, &send_msg, MSG_DEVICE_GET_PARA_ACK, msg.receiver, ret,
 					&tmp, sizeof(device_iot_config_t));
+		} else if( msg.arg_in.cat == DEVICE_CTRL_LED_STATUS) {
+			ret = iot_get_led_status(&tmp);
+			send_iot_ack(&msg, &send_msg, MSG_DEVICE_GET_PARA_ACK, msg.receiver, ret,
+					&tmp, sizeof(device_iot_config_t));
 		}
 		break;
 	case MSG_DEVICE_ACTION:
@@ -759,6 +786,7 @@ static void *storage_detect_func(void *arg)
     }
 
 error:
+	log_qcy(DEBUG_SERIOUS, "-----%s thread exit -----", "storage_detect_thread");
 	close(hotplug_sock);
 	hotplug_sock = -1;
 	pthread_exit(0);
@@ -780,6 +808,39 @@ static void *motor_init_func(void *arg)
 	}
 
 	pthread_exit(0);
+}
+
+static int video_isp_set_attr(unsigned int id, int value)
+{
+	struct rts_video_control ctrl;
+	int ret;
+	ret = rts_av_get_isp_ctrl(id, &ctrl);
+	if (ret) {
+		log_qcy(DEBUG_SERIOUS, "get isp attr fail, ret = %d\n", ret);
+		return ret;
+	}
+	//value = isp_get_valid_value(id, value, &ctrl);
+/*	log_qcy(DEBUG_SERIOUS, "%s min = %d, max = %d, step = %d, default = %d, cur = %d\n",
+			 ctrl.name, ctrl.minimum, ctrl.maximum,
+			 ctrl.step, ctrl.default_value, ctrl.current_value);
+*/
+	ctrl.current_value = value;
+	ret = rts_av_set_isp_ctrl(id, &ctrl);
+	if (ret) {
+		log_qcy(DEBUG_SERIOUS, "set isp attr fail, ret = %d\n", ret);
+		return ret;
+	}
+	ret = rts_av_get_isp_ctrl(id, &ctrl);
+	if (ret) {
+		log_qcy(DEBUG_SERIOUS, "get isp attr fail, ret = %d\n", ret);
+		return ret;
+	}
+/*
+	log_qcy(DEBUG_SERIOUS, "%s min = %d, max = %d, step = %d, default = %d, cur = %d\n",
+			 ctrl.name, ctrl.minimum, ctrl.maximum,
+			 ctrl.step, ctrl.default_value, ctrl.current_value);
+*/
+	return 0;
 }
 
 static void *daynight_mode_func(void *arg)
@@ -815,18 +876,39 @@ static void *daynight_mode_func(void *arg)
     	if(device_config_.soft_hard_ldr)
     	{
     		value = rts_av_get_isp_daynight_statis();
+    		log_qcy(DEBUG_SERIOUS, "day night mode value = %d", value);
+
+    		if(value >= lim_value)
+			{
+    			//night
+				ret = ctl_ircut(GPIO_OFF);
+				ret |= ctl_irled(GPIO_ON);
+
+				video_isp_set_attr(RTS_VIDEO_CTRL_ID_IR_MODE, RTS_ISP_IR_NIGHT);
+				video_isp_set_attr(RTS_VIDEO_CTRL_ID_GRAY_MODE, RTS_ISP_IR_NIGHT);
+
+			} else {
+				//day
+				ret = ctl_ircut(GPIO_ON);
+				ret |= ctl_irled(GPIO_OFF);
+
+				video_isp_set_attr(RTS_VIDEO_CTRL_ID_IR_MODE, RTS_ISP_IR_DAY);
+				video_isp_set_attr(RTS_VIDEO_CTRL_ID_GRAY_MODE, RTS_ISP_IR_DAY);
+			}
     	} else {
     		value = rts_io_adc_get_value(ADC_CHANNEL_0);
-    	}
+    		log_qcy(DEBUG_SERIOUS, "day night mode value = %d", value);
 
-    	log_qcy(DEBUG_VERBOSE, "day night mode value = %d", value);
-    	if(value >= lim_value)
-    	{
-    		ret = ctl_ircut(GPIO_ON);
-    		ret |= ctl_irled(GPIO_OFF);
-    	} else {
-    		ret = ctl_ircut(GPIO_OFF);
-    		ret |= ctl_irled(GPIO_ON);
+    		if(value >= lim_value)
+			{
+				//day
+				ret = ctl_ircut(GPIO_ON);
+				ret |= ctl_irled(GPIO_OFF);
+			} else {
+				//night
+				ret = ctl_ircut(GPIO_OFF);
+				ret |= ctl_irled(GPIO_ON);
+			}
     	}
 
     	if(ret)
@@ -835,7 +917,7 @@ static void *daynight_mode_func(void *arg)
 		sleep(1);
     }
 
-
+	log_qcy(DEBUG_SERIOUS, "-----%s thread exit -----", "daynight_mode_thread");
 	pthread_exit(0);
 }
 

@@ -16,10 +16,11 @@
 /*
  * define
  */
-#define		SERVER_DEVICE_VERSION_STRING		"alpha-4.1.1"
+#define		SERVER_DEVICE_VERSION_STRING		"alpha-4.1.2"
 
 //control
 #define		DEVICE_CTRL_SD_INFO					0x0001
+#define		DEVICE_CTRL_LED_STATUS				0x0002
 #define		DEVICE_CTRL_LED						0x0003
 #define		DEVICE_CTRL_AMPLIFIER				0x0009
 #define		DEVICE_CTRL_ADJUST_AUDIO_VOLUME		0x000a

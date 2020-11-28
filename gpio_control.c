@@ -37,6 +37,9 @@ static struct rts_gpio *rts_gpio_ircutbin  		= NULL;
 static struct rts_gpio *rts_gpio_irled		  	= NULL;
 static struct rts_gpio *rts_gpio_motorable		= NULL;
 
+static int led1_status = 0;
+static int led2_status = 0;
+
 static int set_gpio_value(struct rts_gpio *rts_gpio, int value);
 
 int ctl_ircut(int on_off)
@@ -93,6 +96,16 @@ int ctl_motor595_enable(int on_off)
 	return set_gpio_value(rts_gpio_motorable, !on_off);
 }
 
+int get_led_status(int led_index)
+{
+	if(led_index == 1)
+		return led1_status;
+	else if(led_index == 2)
+		return led2_status;
+
+	return -1;
+}
+
 int ctl_spk_enable(int on_off)
 {
 	if(on_off != 0 && on_off != 1)
@@ -102,21 +115,25 @@ int ctl_spk_enable(int on_off)
 
 int set_blue_led_on()
 {
+	led1_status = LED_ON;
 	return set_gpio_value(rts_gpio_led1, LED_ON);
 }
 
 int set_blue_led_off()
 {
+	led1_status = LED_OFF;
 	return set_gpio_value(rts_gpio_led1, LED_OFF);
 }
 
 int set_orange_led_on()
 {
+	led2_status = LED_ON;
 	return set_gpio_value(rts_gpio_led2, LED_ON);
 }
 
 int set_orange_led_off()
 {
+	led2_status = LED_OFF;
 	return set_gpio_value(rts_gpio_led2, LED_OFF);
 }
 
