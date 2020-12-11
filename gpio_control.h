@@ -16,6 +16,10 @@
 /*
  * define
  */
+#define LED_OFF					0
+#define LED_ON					1
+#define LED_FLASH				1
+
 #define GPIO_ON 		1
 #define GPIO_OFF 		0
 

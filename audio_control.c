@@ -34,7 +34,7 @@ int adjust_input_audio_volume(audio_info_t_m *para, device_config_t config_t)
 	audio_control_info = para;
 
 	log_qcy(DEBUG_INFO, "volume = %d",audio_control_info->volume);
-	if ((audio_control_info->volume < 100 && audio_control_info->volume > 0) || audio_control_info->volume == -1)
+	if ((audio_control_info->volume <= 100 && audio_control_info->volume >= 0) || audio_control_info->volume == -1)
 	{
 
 		log_qcy(DEBUG_INFO, "type = %d",audio_control_info->type);
@@ -143,7 +143,7 @@ int adjust_audio_volume(audio_info_t_m *para, device_config_t config_t)
 	audio_control_info = para;
 
 	//log_qcy(DEBUG_INFO, "volume = %d",audio_control_info->volume);
-	if ((audio_control_info->volume < 100 && audio_control_info->volume > 0) || audio_control_info->volume == -1)
+	if ((audio_control_info->volume <= 100 && audio_control_info->volume >= 0) || audio_control_info->volume == -1)
 	{
 
 		//log_qcy(DEBUG_INFO, "type = %d",audio_control_info->type);

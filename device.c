@@ -46,7 +46,15 @@
  * static
  */
 //variable
+static int					led1_sleep_t[3] = {1, 100000, 200000}; //us
+static int					led2_sleep_t[3] = {2, 200000, 800000}; //us
+static int 					daynight_mode_func_exit = 0;
+static int 					led_flash_func_exit = 0;
+static int 					storage_detect_func_lock = 0;
+static int 					daynight_mode_func_lock = 0;
+static int 					led_flash_func_lock = 0;
 static int 					sd_card_insert;
+static int 					motor_reset_thread_flag = 0;
 static device_config_t		device_config_;
 static server_info_t 		info;
 static message_buffer_t		message;
@@ -104,6 +112,7 @@ static int iot_umount_sd();
 static void *motor_init_func(void *arg);
 static void *storage_detect_func(void *arg);
 static void *daynight_mode_func(void *arg);
+static void *led_flash_func(void *arg);
 static void *motor_reset_func(void *arg);
 static char *get_string_name(int i);
 static int video_isp_set_attr(unsigned int id, int value);
@@ -122,10 +131,13 @@ static void *motor_reset_func(void *arg)
 	misc_set_thread_name("motor_reset_thread");
     pthread_detach(pthread_self());
 
+    motor_reset_thread_flag = 1;
+
 	ret = motor_reset();
 	if(ret)
 		log_qcy(DEBUG_SERIOUS, "motor_reset not ready or failed");
 
+	motor_reset_thread_flag = 0;
 	pthread_exit(0);
 }
 
@@ -134,10 +146,16 @@ static int iot_ctrl_motor_reset()
 	int ret = 0;
 	static pthread_t motor_reset_tid = 0;
 
-    if (ret |= pthread_create(&motor_reset_tid, NULL, motor_reset_func, NULL)) {
-    	log_qcy(DEBUG_SERIOUS, "create motor_reset_func thread failed, ret = %d\n", ret);
-		ret = -1;
-    }
+	if(motor_reset_thread_flag == 0)
+	{
+		if (ret |= pthread_create(&motor_reset_tid, NULL, motor_reset_func, NULL)) {
+			log_qcy(DEBUG_SERIOUS, "create motor_reset_func thread failed, ret = %d\n", ret);
+			ret = -1;
+		}
+	} else {
+		log_qcy(DEBUG_SERIOUS, "motor_reset_func is working now");
+		ret = 0;
+	}
 
 	return ret;
 }
@@ -182,30 +200,43 @@ static int iot_ctrl_day_night(void* arg)
 
 	if(tmp->day_night_mode == DAY_NIGHT_AUTO)
 	{
-	    if (ret |= pthread_create(&day_night_mode_tid, NULL, daynight_mode_func, NULL)) {
-	    	log_qcy(DEBUG_SERIOUS, "create daynight_mode_func thread failed, ret = %d\n", ret);
-			ret = -1;
-	    }
+		if(day_night_mode_tid == 0)
+		{
+			daynight_mode_func_exit = 0;
+			if (ret |= pthread_create(&day_night_mode_tid, NULL, daynight_mode_func, NULL)) {
+				log_qcy(DEBUG_SERIOUS, "create daynight_mode_func thread failed, ret = %d\n", ret);
+				ret = -1;
+			}
+		} else {
+			log_qcy(DEBUG_SERIOUS, "now is day_night automode");
+			ret = 0;
+		}
 	}
 	else if (tmp->day_night_mode == DAY_NIGHT_OFF)
 	{
-		ret = ctl_ircut(GPIO_ON);
-		ret |= ctl_irled(GPIO_OFF);
+
 		if(day_night_mode_tid != 0)
 		{
-			pthread_cancel(day_night_mode_tid);
+			//pthread_cancel(day_night_mode_tid);
+			daynight_mode_func_exit = 1;
 			day_night_mode_tid = 0;
 		}
+		while(!server_get_status(STATUS_TYPE_EXIT) && daynight_mode_func_exit);
+		ret = ctl_ircut(GPIO_ON);
+		ret |= ctl_irled(GPIO_OFF);
 	}
 	else if (tmp->day_night_mode == DAY_NIGHT_ON)
 	{
-		ret = ctl_ircut(GPIO_OFF);
-		ret |= ctl_irled(GPIO_ON);
+
 		if(day_night_mode_tid != 0)
 		{
-			pthread_cancel(day_night_mode_tid);
+			//pthread_cancel(day_night_mode_tid);
+			daynight_mode_func_exit = 1;
 			day_night_mode_tid = 0;
 		}
+		while(!server_get_status(STATUS_TYPE_EXIT) && daynight_mode_func_exit);
+		ret = ctl_ircut(GPIO_OFF);
+		ret |= ctl_irled(GPIO_ON);
 	}
 
 	return ret;
@@ -237,24 +268,88 @@ static int iot_ctrl_amplifier(void* arg)
 
 static int iot_ctrl_led(void* arg)
 {
+	int ret = 0;
 	device_iot_config_t *tmp = NULL;
-	int ret;
+	static pthread_t led1_flash_tid = 0;
+	static pthread_t led2_flash_tid = 0;
 
 	if(arg == NULL)
 		return -1;
 
 	tmp = (device_iot_config_t *)arg;
 
-
-	if(tmp->led1_onoff == 1)
+	if(tmp->led1_onoff == LED_ON)
+	{
+		if(led1_flash_tid != 0)
+		{
+			led_flash_func_exit = 1;
+			led1_flash_tid = 0;
+		}
+		while(!server_get_status(STATUS_TYPE_EXIT) && led_flash_func_exit);
 		ret = set_blue_led_on();
-	else if (tmp->led1_onoff == 0)
+	}
+	else if (tmp->led1_onoff == LED_OFF)
+	{
+		if(led1_flash_tid != 0)
+		{
+			led_flash_func_exit = 1;
+			led1_flash_tid = 0;
+		}
+		while(!server_get_status(STATUS_TYPE_EXIT) && led_flash_func_exit);
 		ret = set_blue_led_off();
+	}
+	else if (tmp->led1_onoff == LED_FLASH) 	//twinkle
+	{
+		//add
+		if(led2_flash_tid != 0)
+		{
+			led_flash_func_exit = 1;
+			led2_flash_tid = 0;
+			while(!server_get_status(STATUS_TYPE_EXIT) && led_flash_func_exit);
+		}
+		led_flash_func_exit = 0;
+		if (ret |= pthread_create(&led1_flash_tid, NULL, led_flash_func, led1_sleep_t)) {
+			log_qcy(DEBUG_SERIOUS, "create led_flash_func thread failed, ret = %d\n", ret);
+			ret = -1;
+		}
+	}
 
-	if(tmp->led2_onoff == 1)
+	if(tmp->led2_onoff == LED_ON)
+	{
+		if(led2_flash_tid != 0)
+		{
+			led_flash_func_exit = 1;
+			led2_flash_tid = 0;
+		}
+		while(!server_get_status(STATUS_TYPE_EXIT) && led_flash_func_exit);
 		ret = set_orange_led_on();
-	else if (tmp->led2_onoff == 0)
+	}
+	else if (tmp->led2_onoff == LED_OFF)
+	{
+		if(led2_flash_tid != 0)
+		{
+			led_flash_func_exit = 1;
+			led2_flash_tid = 0;
+		}
+		while(!server_get_status(STATUS_TYPE_EXIT) && led_flash_func_exit);
+
 		ret = set_orange_led_off();
+	}
+	else if (tmp->led2_onoff == LED_FLASH) 	//twinkle
+	{
+		//add
+		if(led1_flash_tid != 0)
+		{
+			led_flash_func_exit = 1;
+			led1_flash_tid = 0;
+			while(!server_get_status(STATUS_TYPE_EXIT) && led_flash_func_exit);
+		}
+		led_flash_func_exit = 0;
+		if (ret |= pthread_create(&led2_flash_tid, NULL, led_flash_func, led2_sleep_t)) {
+			log_qcy(DEBUG_SERIOUS, "create led_flash_func thread failed, ret = %d\n", ret);
+			ret = -1;
+		}
+	}
 
 	return ret;
 }
@@ -468,6 +563,13 @@ static void server_thread_termination(void)
 
 static int server_release(void)
 {
+
+	while(storage_detect_func_lock || led_flash_func_lock || daynight_mode_func_lock)
+	{
+		log_qcy(DEBUG_SERIOUS, "server_release device ---- ");
+		usleep(50 * 1000); //50ms
+	}
+
 	uninit_led_gpio();
 
 	if(device_config_.motor_enable)
@@ -787,6 +889,7 @@ static void *storage_detect_func(void *arg)
 
 error:
 	log_qcy(DEBUG_SERIOUS, "-----%s thread exit -----", "storage_detect_thread");
+	storage_detect_func_lock = 0;
 	close(hotplug_sock);
 	hotplug_sock = -1;
 	pthread_exit(0);
@@ -843,6 +946,55 @@ static int video_isp_set_attr(unsigned int id, int value)
 	return 0;
 }
 
+static void *led_flash_func(void *arg)
+{
+	int ret = 0;
+	server_status_t st;
+
+    signal(SIGINT, (__sighandler_t)server_thread_termination);
+    signal(SIGTERM, (__sighandler_t)server_thread_termination);
+	misc_set_thread_name("led_flash_func_thread");
+    pthread_detach(pthread_self());
+
+    led_flash_func_lock = 1;
+
+    while(!server_get_status(STATUS_TYPE_EXIT) && !led_flash_func_exit)
+    {
+		//exit logic
+		st = server_get_status(STATUS_TYPE_STATUS);
+    	if( st != STATUS_RUN ) {
+			if ( st == STATUS_IDLE || st == STATUS_SETUP || st == STATUS_START)
+				continue;
+			else
+				break;
+		}
+
+    	if(*(int *)arg == 1)
+    	{
+    		set_blue_led_on();
+    	}else{
+    		set_orange_led_on();
+    	}
+
+    	usleep(*(int *)((int *)arg + 1));
+
+    	if(*(int *)arg == 1)
+    	{
+    		set_blue_led_off();
+    	}else{
+    		set_orange_led_off();
+    	}
+
+    	usleep(*(int *)((int *)arg + 2));
+    }
+
+    led_flash_func_exit = 0;
+    led_flash_func_lock = 0;
+
+    log_qcy(DEBUG_SERIOUS, "-----%s thread exit -----", "led_flash_func_thread");
+    pthread_exit(0);
+}
+
 static void *daynight_mode_func(void *arg)
 {
 	int ret = 0;
@@ -862,7 +1014,9 @@ static void *daynight_mode_func(void *arg)
 		lim_value = device_config_.day_night_lim;
 	}
 
-    while(!server_get_status(STATUS_TYPE_EXIT))
+	daynight_mode_func_lock = 1;
+
+    while(!server_get_status(STATUS_TYPE_EXIT) && !daynight_mode_func_exit)
     {
 		//exit logic
 		st = server_get_status(STATUS_TYPE_STATUS);
@@ -918,6 +1072,8 @@ static void *daynight_mode_func(void *arg)
     }
 
 	log_qcy(DEBUG_SERIOUS, "-----%s thread exit -----", "daynight_mode_thread");
+	daynight_mode_func_exit = 0;
+	daynight_mode_func_lock = 0;
 	pthread_exit(0);
 }
 
@@ -988,7 +1144,35 @@ static int server_idle(void)
 static int server_start(void)
 {
 	int ret = 0;
-	server_set_status(STATUS_TYPE_STATUS, STATUS_RUN);
+	audio_info_t_m ctrl_audio;
+
+	memset(&ctrl_audio, 0, sizeof(ctrl_audio));
+	ctrl_audio.volume = 100;
+
+	ret = adjust_audio_volume(&ctrl_audio, device_config_);
+	ret |= adjust_input_audio_volume(&ctrl_audio, device_config_);
+	if(ret)
+	{
+		log_qcy(DEBUG_SERIOUS, "adjust_input_audio_volume failed\n");
+		goto restart;
+	}
+
+	//day mode
+	ret = ctl_ircut(GPIO_ON);
+	ret |= ctl_irled(GPIO_OFF);
+
+	ret = ctl_spk_enable(GPIO_ON);
+	if(ret)
+	{
+		log_qcy(DEBUG_SERIOUS, "open spk failed\n");
+		goto restart;
+	}
+
+restart:
+	if(ret)
+		server_set_status(STATUS_TYPE_STATUS, STATUS_RESTART);
+	else
+		server_set_status(STATUS_TYPE_STATUS, STATUS_RUN);
 	return ret;
 }
 
@@ -1009,6 +1193,7 @@ static int server_stop(void)
 static int server_restart(void)
 {
 	int ret = 0;
+	server_set_status(STATUS_TYPE_EXIT,1);
 	server_release();
 	server_set_status(STATUS_TYPE_STATUS, STATUS_NONE);
 	return ret;
@@ -1078,7 +1263,7 @@ static void *server_func(void)
 			server_error();
 			break;
 		}
-//		usleep(100);//100ms
+		usleep(1000 * 10);//10ms
 		heart_beat_proc();
 	}
 	server_release();
