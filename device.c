@@ -1263,7 +1263,7 @@ static void *server_func(void)
 			server_error();
 			break;
 		}
-		usleep(1000 * 10);//10ms
+		usleep(1000 * 100);//100ms
 		heart_beat_proc();
 	}
 	server_release();
