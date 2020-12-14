@@ -208,11 +208,11 @@ int umount_sd()
 	if(plug == 1)
 	{
 		ret = get_sd_block_mountpath(block_path, mountpath);
-		if(ret)
-		{
-			log_qcy(DEBUG_SERIOUS, "get_sd_block_mountpath prase failed\n");
-			return -1;
-		}
+	    if(ret < 0)
+	    {
+	        log_qcy(DEBUG_SERIOUS, "get_sd_block_mountpath prase failed\n");
+	        return -1;
+	    }
 
 		if(mountpath != NULL)
 		{
