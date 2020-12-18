@@ -161,7 +161,7 @@ int get_sd_info(void **para, device_config_t config_t)
     struct space_info_t space_info_t;
 
     sd_info.plug = get_sd_status(config_t);
-    if(sd_info.plug != SD_STATUS_PLUG)
+    if(sd_info.plug == SD_STATUS_NO || sd_info.plug == SD_STATUS_EJECTED)
     {
     	log_qcy(DEBUG_VERBOSE, "can not find sd card\n");
         sd_info.totalBytes = 0;
@@ -197,7 +197,8 @@ ejected_or_no:
 int umount_sd()
 {
 	int plug;
-	int ret;
+	int ret = 0;
+	int i = 0;
     char *block_path = NULL;
     char *mountpath = NULL;
     block_path = malloc(SIZE);
@@ -216,11 +217,22 @@ int umount_sd()
 
 		if(mountpath != NULL)
 		{
-			ret = umount(mountpath);
+			ret = umount2(mountpath, MNT_FORCE);
 			if(ret)
 			{
 				log_qcy(DEBUG_SERIOUS, "umount failed\n");
-				ret = -1;
+				while(ret && i < 3)
+				{
+					ret = umount2(mountpath, MNT_FORCE);
+					i++;
+					usleep(500 * 1000);
+				}
+				if(ret)
+				{
+					log_qcy(DEBUG_SERIOUS, "system umount\n");
+					system("umount  /mnt/media");
+					ret = 0;
+				}
 			}
 		}
 	}
@@ -365,6 +377,7 @@ void *format_fun(void *arg)
     char *block_path;
     char *mountpath;
     int ret;
+    int i = 0;
     block_path = calloc(1, SIZE);
     mountpath = calloc(1, SIZE);
 
@@ -380,12 +393,27 @@ void *format_fun(void *arg)
 
     if(ret == 2)
     {
-    	ret = umount(mountpath);
-    	if(ret)
-    	{
-    		log_qcy(DEBUG_SERIOUS, "umount failed\n");
-    		goto err;
-    	}
+		if(mountpath != NULL)
+		{
+			ret = umount2(mountpath, MNT_FORCE);
+			if(ret)
+			{
+				log_qcy(DEBUG_SERIOUS, "umount failed\n");
+				while(ret && i < 3)
+				{
+					ret = umount2(mountpath, MNT_FORCE);
+					i++;
+					usleep(500 * 1000);
+				}
+				if(ret)
+				{
+					log_qcy(DEBUG_SERIOUS, "system umount\n");
+					system("umount  /mnt/media");
+					ret = 0;
+				}
+			}
+		}
+
     }
 
     snprintf(cmd, SIZE, "%s %s",VFAT_FORMAT_TOOL_PATH, block_path);

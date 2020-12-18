@@ -58,6 +58,9 @@ static int 					motor_reset_thread_flag = 0;
 static device_config_t		device_config_;
 static server_info_t 		info;
 static message_buffer_t		message;
+static int					umount_flag = 0;
+static message_t 			rev_msg_tmp;
+
 static server_name_t server_name_tt[] = {
 		{0, "config"},
 		{1, "device"},
@@ -108,7 +111,7 @@ static int iot_ctrl_day_night(void* arg);
 static int iot_ctrl_motor_auto(int status);
 static int iot_ctrl_motor(int x_y, int dir);
 static int iot_ctrl_motor_reset();
-static int iot_umount_sd();
+static int iot_umount_sd(int umount_orformat);
 static void *motor_init_func(void *arg);
 static void *storage_detect_func(void *arg);
 static void *daynight_mode_func(void *arg);
@@ -242,11 +245,24 @@ static int iot_ctrl_day_night(void* arg)
 	return ret;
 }
 
-static int iot_umount_sd()
+static int iot_umount_sd(int umount_orformat)
 {
-	int ret;
+	int ret = 0;
+	message_t send_msg;
 
-	ret = umount_sd();
+	msg_init(&send_msg);
+	//ret = umount_sd();
+
+	send_msg.sender = send_msg.receiver = SERVER_DEVICE;
+	send_msg.message = MSG_DEVICE_ACTION;
+	send_msg.arg_in.cat = DEVICE_ACTION_SD_EJECTED;
+	send_msg.arg_in.wolf = 1;
+
+	if(umount_orformat)
+		send_msg.arg_pass.wolf = 1;
+
+	server_player_message(&send_msg);
+	server_recorder_message(&send_msg);
 
 	return ret;
 }
@@ -618,6 +634,7 @@ static int server_get_status(int type)
 static int server_message_proc(void)
 {
 	int ret = 0, ret1 = 0;
+	static int format_flag = 0;
 	message_t msg;
 	message_t send_msg;
 	device_iot_config_t tmp;
@@ -664,7 +681,10 @@ static int server_message_proc(void)
 		break;
 	case MSG_DEVICE_ACTION:
 		if( msg.arg_in.cat == DEVICE_ACTION_SD_FORMAT) {
-			ret = format_sd();
+			umount_flag = 0;
+			ret = iot_umount_sd(1);
+			msg_init(&rev_msg_tmp);
+			msg_deep_copy(&rev_msg_tmp, &msg);
 			send_iot_ack(&msg, &send_msg, MSG_DEVICE_ACTION_ACK, msg.receiver, ret,
 					NULL, 0);
 		} else if( msg.arg_in.cat == DEVICE_ACTION_USER_FORMAT ) {
@@ -672,9 +692,33 @@ static int server_message_proc(void)
 			send_iot_ack(&msg, &send_msg, MSG_DEVICE_ACTION_ACK, msg.receiver, ret,
 					NULL, 0);
 		} else if( msg.arg_in.cat == DEVICE_ACTION_SD_UMOUNT ) {
-			ret = iot_umount_sd();
-			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
+
+			umount_flag = 0;
+			ret = iot_umount_sd(0);
+			msg_init(&rev_msg_tmp);
+			msg_deep_copy(&rev_msg_tmp, &msg);
+			send_iot_ack(&msg, &send_msg, MSG_DEVICE_ACTION_ACK, msg.receiver, ret,
 					NULL, 0);
+		} else if( msg.arg_in.cat == DEVICE_ACTION_SD_EJECTED_ACK ) {
+
+			misc_set_bit(&umount_flag, msg.receiver, 1);
+			format_flag |= msg.arg_pass.wolf;
+			if(umount_flag == 5632)
+			{
+				system("sync");
+				system("sync");
+				sleep(1);
+
+				if(format_flag)
+				{
+					ret = format_sd();
+				}else{
+					ret = umount_sd();
+				}
+//				send_iot_ack(&rev_msg_tmp, &send_msg, MSG_DEVICE_ACTION_ACK, rev_msg_tmp.receiver, ret,
+//						NULL, 0);
+				umount_flag = 0;
+			}
 		}
 		break;
 	case MSG_DEVICE_CTRL_DIRECT:
@@ -784,6 +828,7 @@ static void *storage_detect_func(void *arg)
 	misc_set_thread_name("storage_detect_thread");
     pthread_detach(pthread_self());
 
+    storage_detect_func_lock = 1;
     sd_card_insert = get_sd_plug_status();
     memset(&snl, 0, sizeof(struct sockaddr_nl));
 
@@ -818,7 +863,7 @@ static void *storage_detect_func(void *arg)
 
     	FD_ZERO(&fds);
     	FD_SET(hotplug_sock,&fds);
-    	timeout.tv_sec=1;
+    	timeout.tv_sec=3;
     	timeout.tv_usec=0;
 
         switch(select(hotplug_sock + 1,&fds,NULL,NULL,&timeout))
@@ -830,26 +875,26 @@ static void *storage_detect_func(void *arg)
             case 0:
                 if(sd_card_insert)
                 {
-                	if(is_mounted(device_config_.sd_mount_path) == 1)
-                	{
-                	    if (statfs(device_config_.sd_mount_path, &statFS) == -1){
-                	        log_qcy(DEBUG_SERIOUS, "statfs failed for path->[%s]\n", device_config_.sd_mount_path);
-                	        goto error;
-                	    }
-                	    freeBytes = (unsigned int)((long long)statFS.f_bfree * (long long)statFS.f_frsize / 1024);
-                	    if(freeBytes / 1024 < device_config_.storage_detect_lim)
-                	    {
-                	    	msg.message = MSG_DEVICE_SD_CAP_ALARM;
-                			for(i=0;i<MAX_SERVER;i++) {
-                				if( misc_get_bit( device_config_.storage_detect_notify, i) ) {
-                					log_qcy(DEBUG_VERBOSE, "lim send to ->[%d]\n",i);
-                					send_message(i, &msg);
-                				}
-                			}
-                	    }
-                	}
+					if(is_mounted(device_config_.sd_mount_path) == 1)
+					{
+						if (statfs(device_config_.sd_mount_path, &statFS) == -1){
+							log_qcy(DEBUG_SERIOUS, "statfs failed for path->[%s]\n", device_config_.sd_mount_path);
+							goto error;
+						}
+						freeBytes = (unsigned int)((long long)statFS.f_bfree * (long long)statFS.f_frsize / 1024);
+						if(freeBytes / 1024 < device_config_.storage_detect_lim)
+						{
+							msg.message = MSG_DEVICE_ACTION;
+							msg.arg_in.cat = DEVICE_ACTION_SD_CAP_ALARM;
+							for(i=0;i<MAX_SERVER;i++) {
+								if( misc_get_bit( device_config_.storage_detect_notify, i) ) {
+									log_qcy(DEBUG_VERBOSE, "lim send to ->[%d]\n",i);
+									send_message(i, &msg);
+								}
+							}
+						}
+					}
                 }
-                sleep(4);
                 break;
             default:
                 if(FD_ISSET(hotplug_sock,&fds))
@@ -857,30 +902,41 @@ static void *storage_detect_func(void *arg)
                     ret = recv(hotplug_sock, buf, SIZE1024 , 0);
                     if(ret > 0)
                     {
-                        ptr = strstr(buf, "add@/devices/platform/ocp/18300000.sdhc");
-                        if(ptr != NULL)
-                        {
-                        	sd_card_insert = 1;
-                        	msg.message = MSG_DEVICE_SD_INSERT;
-                        	for(i=0;i<MAX_SERVER;i++) {
-								if( misc_get_bit( device_config_.storage_detect_notify, i) ) {
-									log_qcy(DEBUG_VERBOSE, "insert send to ->[%d]\n",i);
-									send_message(i, &msg);
+                    	if(sd_card_insert == 0)
+                    	{
+							ptr = strstr(buf, "add@/devices/platform/ocp/18300000.sdhc");
+							if(ptr != NULL)
+							{
+								sd_card_insert = 1;
+								msg.message = MSG_DEVICE_ACTION;
+								msg.arg_in.cat = DEVICE_ACTION_SD_INSERT;
+								while(!is_mounted(device_config_.sd_mount_path))
+									usleep(1000 * 500);
+
+								for(i=0;i<MAX_SERVER;i++) {
+									if( misc_get_bit( device_config_.storage_detect_notify, i) ) {
+										log_qcy(DEBUG_VERBOSE, "insert send to ->[%d]\n",i);
+										send_message(i, &msg);
+									}
 								}
 							}
-                        }
-                        ptr = strstr(buf, "remove@/devices/platform/ocp/18300000.sdhc");
-                        if(ptr != NULL)
-                        {
-                        	sd_card_insert = 0;
-                        	msg.message = MSG_DEVICE_SD_EJECTED;
-                        	for(i=0;i<MAX_SERVER;i++) {
-								if( misc_get_bit( device_config_.storage_detect_notify, i) ) {
-									log_qcy(DEBUG_VERBOSE, "remove send to ->[%d]\n",i);
-									send_message(i, &msg);
+                    	}
+                    	if(sd_card_insert == 1)
+                    	{
+							ptr = strstr(buf, "remove@/devices/platform/ocp/18300000.sdhc");
+							if(ptr != NULL)
+							{
+								sd_card_insert = 0;
+								msg.message = MSG_DEVICE_ACTION;
+								msg.arg_in.cat = DEVICE_ACTION_SD_EJECTED;
+								for(i=0;i<MAX_SERVER;i++) {
+									if( misc_get_bit( device_config_.storage_detect_notify, i) ) {
+										log_qcy(DEBUG_VERBOSE, "remove send to ->[%d]\n",i);
+										send_message(i, &msg);
+									}
 								}
 							}
-                        }
+                    	}
                     }
                 }
                 break;
@@ -1327,7 +1383,7 @@ int server_device_message(message_t *msg)
 	ret = msg_buffer_push(&message, msg);
 	if( ret!=0 )
 		log_qcy(DEBUG_SERIOUS, "message push in device error =%d", ret);
-	log_qcy(DEBUG_INFO, "push into the device message queue: sender=%s, message=%d, ret=%d", get_string_name(msg->sender), msg->message, ret);
+	log_qcy(DEBUG_INFO, "push into the device message queue: sender=%s, message=%x, ret=%d", get_string_name(msg->sender), msg->message, ret);
 	ret = pthread_rwlock_unlock(&message.lock);
 	if (ret)
 		log_qcy(DEBUG_SERIOUS, "add message unlock fail, ret = %d\n", ret);
