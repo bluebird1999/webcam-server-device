@@ -582,7 +582,7 @@ static int server_release(void)
 
 	while(storage_detect_func_lock || led_flash_func_lock || daynight_mode_func_lock)
 	{
-		log_qcy(DEBUG_SERIOUS, "server_release device ---- ");
+//		log_qcy(DEBUG_SERIOUS, "server_release device ---- ");
 		usleep(50 * 1000); //50ms
 	}
 
