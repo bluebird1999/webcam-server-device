@@ -378,6 +378,7 @@ void *format_fun(void *arg)
     char *mountpath;
     int ret;
     int i = 0;
+    message_t msg;
     block_path = calloc(1, SIZE);
     mountpath = calloc(1, SIZE);
 
@@ -437,15 +438,31 @@ void *format_fun(void *arg)
     }
 
 err:
-	sd_format_status_t = false;
-	FREE_T(block_path);
-	FREE_T(mountpath);
+
 
     if(ret)
     	log_info("format sd error\n");
     else
+    {
     	log_info("format sd success\n");
+    }
 
+    if(is_mounted(mountpath))
+    {
+    	system("sync");
+		sleep(1);
+		msg_init(&msg);
+		msg.sender = msg.receiver = SERVER_DEVICE;
+		msg.message = MSG_DEVICE_ACTION;
+		msg.arg_in.cat = DEVICE_ACTION_SD_INSERT;
+		server_recorder_message(&msg);
+		server_player_message(&msg);
+    }
+
+
+	sd_format_status_t = false;
+	FREE_T(block_path);
+	FREE_T(mountpath);
     pthread_exit(0);
 }
 
