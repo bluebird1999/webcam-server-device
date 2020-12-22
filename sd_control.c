@@ -201,22 +201,24 @@ int umount_sd()
 	int i = 0;
     char *block_path = NULL;
     char *mountpath = NULL;
-    block_path = malloc(SIZE);
-    mountpath = malloc(SIZE);
+    block_path = calloc(1, SIZE);
+    mountpath = calloc(1, SIZE);
 
-	plug = get_sd_plug_status();
+//	plug = get_sd_plug_status();
+//
 
-	if(plug == 1)
+	ret = get_sd_block_mountpath(block_path, mountpath);
+	if(ret < 0)
 	{
-		ret = get_sd_block_mountpath(block_path, mountpath);
-	    if(ret < 0)
-	    {
-	        log_qcy(DEBUG_SERIOUS, "get_sd_block_mountpath prase failed\n");
-	        return -1;
-	    }
+		log_qcy(DEBUG_SERIOUS, "get_sd_block_mountpath prase failed\n");
+		return -1;
+	}
 
-		if(mountpath != NULL)
-		{
+	log_qcy(DEBUG_VERBOSE, "umount mountpath = %s\n",mountpath);
+	if(mountpath != NULL)
+	{
+//		if(is_mounted(mountpath) == 1)
+//		{
 			ret = umount2(mountpath, MNT_FORCE);
 			if(ret)
 			{
@@ -234,7 +236,7 @@ int umount_sd()
 					ret = 0;
 				}
 			}
-		}
+//		}
 	}
 
 	FREE_T(block_path);

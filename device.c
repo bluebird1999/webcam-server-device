@@ -55,10 +55,11 @@ static int 					daynight_mode_func_lock = 0;
 static int 					led_flash_func_lock = 0;
 static int 					sd_card_insert;
 static int 					motor_reset_thread_flag = 0;
+static int					umount_server_flag = 0;
+static int					umount_flag = 0;
 static device_config_t		device_config_;
 static server_info_t 		info;
 static message_buffer_t		message;
-static int					umount_flag = 0;
 static message_t 			rev_msg_tmp;
 
 static server_name_t server_name_tt[] = {
@@ -681,7 +682,7 @@ static int server_message_proc(void)
 		break;
 	case MSG_DEVICE_ACTION:
 		if( msg.arg_in.cat == DEVICE_ACTION_SD_FORMAT) {
-			umount_flag = 0;
+			umount_server_flag = 0;
 			ret = iot_umount_sd(1);
 			msg_init(&rev_msg_tmp);
 			msg_deep_copy(&rev_msg_tmp, &msg);
@@ -693,17 +694,20 @@ static int server_message_proc(void)
 					NULL, 0);
 		} else if( msg.arg_in.cat == DEVICE_ACTION_SD_UMOUNT ) {
 
-			umount_flag = 0;
-			ret = iot_umount_sd(0);
-			msg_init(&rev_msg_tmp);
-			msg_deep_copy(&rev_msg_tmp, &msg);
+			if(!umount_flag)
+			{
+				umount_server_flag = 0;
+				ret = iot_umount_sd(0);
+				msg_init(&rev_msg_tmp);
+				msg_deep_copy(&rev_msg_tmp, &msg);
+			}
 			send_iot_ack(&msg, &send_msg, MSG_DEVICE_ACTION_ACK, msg.receiver, ret,
 					NULL, 0);
 		} else if( msg.arg_in.cat == DEVICE_ACTION_SD_EJECTED_ACK ) {
 
-			misc_set_bit(&umount_flag, msg.receiver, 1);
+			misc_set_bit(&umount_server_flag, msg.receiver, 1);
 			format_flag |= msg.arg_pass.wolf;
-			if(umount_flag == 5632)
+			if(umount_server_flag == 5632)
 			{
 				system("sync");
 				system("sync");
@@ -714,10 +718,11 @@ static int server_message_proc(void)
 					ret = format_sd();
 				}else{
 					ret = umount_sd();
+					umount_flag = 1;
 				}
 //				send_iot_ack(&rev_msg_tmp, &send_msg, MSG_DEVICE_ACTION_ACK, rev_msg_tmp.receiver, ret,
 //						NULL, 0);
-				umount_flag = 0;
+				umount_server_flag = 0;
 			}
 		}
 		break;
@@ -908,6 +913,7 @@ static void *storage_detect_func(void *arg)
 							if(ptr != NULL)
 							{
 								sd_card_insert = 1;
+								umount_flag = 0;
 								msg.message = MSG_DEVICE_ACTION;
 								msg.arg_in.cat = DEVICE_ACTION_SD_INSERT;
 								while(!is_mounted(device_config_.sd_mount_path))
@@ -926,15 +932,24 @@ static void *storage_detect_func(void *arg)
 							ptr = strstr(buf, "remove@/devices/platform/ocp/18300000.sdhc");
 							if(ptr != NULL)
 							{
-								sd_card_insert = 0;
-								msg.message = MSG_DEVICE_ACTION;
-								msg.arg_in.cat = DEVICE_ACTION_SD_EJECTED;
-								for(i=0;i<MAX_SERVER;i++) {
-									if( misc_get_bit( device_config_.storage_detect_notify, i) ) {
-										log_qcy(DEBUG_VERBOSE, "remove send to ->[%d]\n",i);
-										send_message(i, &msg);
+								if(!umount_flag)
+								{
+									umount_server_flag = 0;
+									msg.message = MSG_DEVICE_ACTION;
+									msg.arg_in.cat = DEVICE_ACTION_SD_EJECTED;
+									msg.arg_in.wolf = 1;
+									for(i=0;i<MAX_SERVER;i++) {
+										if( misc_get_bit( device_config_.storage_detect_notify, i) ) {
+											log_qcy(DEBUG_VERBOSE, "remove send to ->[%d]\n",i);
+											send_message(i, &msg);
+										}
 									}
+									umount_flag = 1;
 								}
+								sd_card_insert = 0;
+
+//								server_player_interrupt_routine(1);
+//								server_recorder_interrupt_routine(1);
 							}
                     	}
                     }
