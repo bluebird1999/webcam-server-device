@@ -57,6 +57,7 @@ static int 					sd_card_insert;
 static int 					motor_reset_thread_flag = 0;
 static int					umount_server_flag = 0;
 static int					umount_flag = 0;
+static int					step_motor_init_flag = 0;
 static device_config_t		device_config_;
 static server_info_t 		info;
 static message_buffer_t		message;
@@ -993,6 +994,7 @@ static void *motor_init_func(void *arg)
 		log_qcy(DEBUG_SERIOUS, "init_motor init failed");
 	}
 
+	step_motor_init_flag = 1;
 	pthread_exit(0);
 }
 
@@ -1191,7 +1193,7 @@ static int server_setup(void)
 		goto err;
 	}
 
-	if(device_config_.motor_enable)
+	if(device_config_.motor_enable && !step_motor_init_flag)
 	{
 		if ((ret = pthread_create(&motor_tid, NULL, motor_init_func, NULL))) {
 			log_qcy(DEBUG_SERIOUS, "create motor init thread failed, ret=%d\n", ret);
