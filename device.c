@@ -61,6 +61,8 @@ static device_config_t		device_config_;
 static server_info_t 		info;
 static message_buffer_t		message;
 static message_t 			rev_msg_tmp;
+static pthread_mutex_t		d_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t		d_cond = PTHREAD_COND_INITIALIZER;
 
 static server_name_t server_name_tt[] = {
 		{0, "config"},
@@ -641,6 +643,15 @@ static int server_message_proc(void)
 	device_iot_config_t tmp;
 	msg_init(&msg);
 	msg_init(&send_msg);
+
+	pthread_mutex_lock(&d_mutex);
+	if( message.head == message.tail ) {
+		if( info.status==STATUS_RUN ) {
+			pthread_cond_wait(&d_cond,&d_mutex);
+		}
+	}
+	pthread_mutex_unlock(&d_mutex);
+
 	ret = pthread_rwlock_wrlock(&message.lock);
 	if(ret)	{
 		log_qcy(DEBUG_SERIOUS, "add message lock fail, ret = %d\n", ret);
@@ -1398,6 +1409,11 @@ int server_device_message(message_t *msg)
 	ret = msg_buffer_push(&message, msg);
 	if( ret!=0 )
 		log_qcy(DEBUG_SERIOUS, "message push in device error =%d", ret);
+	else {
+		pthread_mutex_lock(&d_mutex);
+		pthread_cond_signal(&d_cond);
+		pthread_mutex_unlock(&d_mutex);
+	}
 	log_qcy(DEBUG_INFO, "push into the device message queue: sender=%s, message=%x, ret=%d", get_string_name(msg->sender), msg->message, ret);
 	ret = pthread_rwlock_unlock(&message.lock);
 	if (ret)
