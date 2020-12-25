@@ -81,11 +81,11 @@ static int sd_getFSType_supp(char *devPath)
         log_qcy(DEBUG_VERBOSE,  "dev:%s, filesystem:fat32!\n", devPath);
         ret = 0;
     }
-    else if(!strncmp((data+0x3), "EXFAT", strlen("EXFAT"))) //the offset with 0x3 is exfat tag;
-    {
-        log_qcy(DEBUG_VERBOSE,  "dev:%s, filesystem:exfat!\n", devPath);
-        ret = 0;
-    }
+//    else if(!strncmp((data+0x3), "EXFAT", strlen("EXFAT"))) //the offset with 0x3 is exfat tag;
+//    {
+//        log_qcy(DEBUG_VERBOSE,  "dev:%s, filesystem:exfat!\n", devPath);
+//        ret = 0;
+//    }
     else
     {
         log_qcy(DEBUG_SERIOUS,  "dev:%s, Unknown filesystem type!\n", devPath);

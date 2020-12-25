@@ -734,6 +734,7 @@ static int server_message_proc(void)
 //				send_iot_ack(&rev_msg_tmp, &send_msg, MSG_DEVICE_ACTION_ACK, rev_msg_tmp.receiver, ret,
 //						NULL, 0);
 				umount_server_flag = 0;
+				format_flag = 0;
 			}
 		}
 		break;
