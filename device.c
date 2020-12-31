@@ -182,13 +182,9 @@ static int iot_ctrl_motor_auto(int status)
 
 	if(status == MOTOR_AUTO)
 	{
-
 		ret = motor_auto_move();
-
 	} else if(status == MOTOR_STOP) {
-
 		ret = motor_auto_move_stop();
-
 	}
 
 	return ret;
@@ -719,7 +715,8 @@ static int server_message_proc(void)
 
 			misc_set_bit(&umount_server_flag, msg.receiver, 1);
 			format_flag |= msg.arg_pass.wolf;
-			if(umount_server_flag == 5632)
+
+			if(umount_server_flag == 1664)
 			{
 				system("sync");
 				system("sync");
