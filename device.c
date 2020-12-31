@@ -1243,10 +1243,10 @@ static int server_start(void)
 	ret = ctl_ircut(GPIO_ON);
 	ret |= ctl_irled(GPIO_OFF);
 
-	ret = ctl_spk_enable(GPIO_ON);
+	ret = ctl_spk_enable(GPIO_OFF);
 	if(ret)
 	{
-		log_qcy(DEBUG_SERIOUS, "open spk failed\n");
+		log_qcy(DEBUG_SERIOUS, "close spk failed\n");
 		goto restart;
 	}
 

@@ -180,22 +180,22 @@ int init_led_gpio(device_config_t *rconfig)
 	}
 
 	//spk
-//	if(rconfig->spk_gpio_mcu)
-//		rts_gpio_spk = rts_io_gpio_request(DOMAIN_GPIO_MCU, rconfig->spk_gpio);
-//	else
-//		rts_gpio_spk = rts_io_gpio_request(DOMAIN_GPIO_SYSTEM, rconfig->spk_gpio);
-//	if(!rts_gpio_spk)
-//	{
-//		log_qcy(DEBUG_SERIOUS, "can not requset gpio num %d\n", rconfig->spk_gpio);
-//		return -1;
-//	}
-//
-//	if(rts_io_gpio_set_direction(rts_gpio_spk, GPIO_OUTPUT))
-//	{
-//		log_qcy(DEBUG_SERIOUS, "can not set gpio %d dir\n", rconfig->spk_gpio);
-//		rts_io_gpio_free(rts_gpio_spk);
-//		return -1;
-//	}
+	if(rconfig->spk_gpio_mcu)
+		rts_gpio_spk = rts_io_gpio_request(DOMAIN_GPIO_MCU, rconfig->spk_gpio);
+	else
+		rts_gpio_spk = rts_io_gpio_request(DOMAIN_GPIO_SYSTEM, rconfig->spk_gpio);
+	if(!rts_gpio_spk)
+	{
+		log_qcy(DEBUG_SERIOUS, "can not requset gpio num %d\n", rconfig->spk_gpio);
+		return -1;
+	}
+
+	if(rts_io_gpio_set_direction(rts_gpio_spk, GPIO_OUTPUT))
+	{
+		log_qcy(DEBUG_SERIOUS, "can not set gpio %d dir\n", rconfig->spk_gpio);
+		rts_io_gpio_free(rts_gpio_spk);
+		return -1;
+	}
 
 	//ircutain
 	if(rconfig->ircut_ain_mcu)
