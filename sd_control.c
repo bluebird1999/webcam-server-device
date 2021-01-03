@@ -63,7 +63,7 @@ static int sd_getFSType_supp(char *devPath)
 
     //read the tag data for exfat/fat32
     fd = open(devPath, O_RDONLY);
-    if(!fd)
+    if(fd == -1)
     {
         log_qcy(DEBUG_SERIOUS,  "Open device failed!\n");
         return -1;
@@ -152,6 +152,39 @@ static int get_sd_status(device_config_t config_t)
 
 	ret = sd_status;
 	return ret;
+}
+
+#define AUTO_PARTITION_SCRIPT_PATH "/tmp/sd_part.sh"
+static int create_partition_script(void)
+{
+    int ret = 0;
+    FILE *pfile;
+    char buf[128];
+
+    pfile = fopen(AUTO_PARTITION_SCRIPT_PATH, "w+");
+    if (pfile) {
+        memset(buf, 0, sizeof(buf));
+        snprintf(buf, sizeof(buf),
+                "echo \""
+                "n\n"
+                "p\n"
+                "1\n"
+                "\n"
+                "\n"
+                "w\n"
+                "\" | fdisk /dev/mmcblk0\n");
+        fwrite(buf, 1, strlen(buf), pfile);
+        fflush(pfile);
+        fclose(pfile);
+        system("chmod 777 "AUTO_PARTITION_SCRIPT_PATH);
+        ret = 0;
+    }
+    else {
+    	log_qcy(DEBUG_SERIOUS, "can not create_partition_script");
+        ret = -1;
+    }
+
+    return ret;
 }
 
 int get_sd_info(void **para, device_config_t config_t)
@@ -432,6 +465,24 @@ void *format_fun(void *arg)
     	goto err;
     }
 
+    if(strlen(block_path) == strlen(MMC_BLOCK_PATH_PAR))
+    {
+    	if(!create_partition_script())
+    	{
+    		sleep(1);
+    		exec_t(AUTO_PARTITION_SCRIPT_PATH);
+    		if(is_mounted(mountpath))
+    			umount(mountpath);
+    		strncpy(block_path, "/dev/mmcblk0p1", SIZE);
+    		snprintf(cmd, SIZE, "%s %s", VFAT_FORMAT_TOOL_PATH, block_path);
+    		ret = exec_t(cmd);
+    		system("sync");
+    		if(is_mounted(mountpath))
+    		    umount(mountpath);
+    		sleep(1);
+    	}
+    }
+
     ret = mount(block_path, mountpath, "vfat", 0, NULL);
     if(ret)
     {
@@ -440,8 +491,6 @@ void *format_fun(void *arg)
     }
 
 err:
-
-
     if(ret)
     	log_info("format sd error\n");
     else
