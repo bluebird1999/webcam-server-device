@@ -116,7 +116,9 @@ int is_mounted(char *mount_path)
     fclose(fp);
 
     if(strstr(data, mount_path))
+    {
     	return 1;
+    }
 
 	return 0;
 }
@@ -125,7 +127,6 @@ static int get_sd_status(device_config_t config_t)
 {
 	int ret = 0;
 	int sd_status = 0;
-	struct statfs statFS;
 
 	sd_status = get_sd_plug_status();
 	if(sd_status == SD_STATUS_NO)
@@ -229,9 +230,9 @@ ejected_or_no:
 
 int umount_sd()
 {
-	int plug;
 	int ret = 0;
 	int i = 0;
+	message_t msg;
     char *block_path = NULL;
     char *mountpath = NULL;
     block_path = calloc(1, SIZE);
@@ -265,7 +266,7 @@ int umount_sd()
 				if(ret)
 				{
 					log_qcy(DEBUG_SERIOUS, "system umount\n");
-					system("umount  /mnt/media");
+					exec_t("umount  /mnt/media");
 					ret = 0;
 				}
 			}
@@ -274,6 +275,16 @@ int umount_sd()
 
 	FREE_T(block_path);
 	FREE_T(mountpath);
+
+	if(!ret)
+	{
+		msg_init(&msg);
+		msg.sender = msg.receiver = SERVER_DEVICE;
+		msg.message = MSG_DEVICE_ACTION;
+		msg.arg_in.cat = DEVICE_ACTION_SD_EJECTED;
+		msg.arg_in.dog = SD_STATUS_EJECTED;
+		server_miio_message(&msg);
+	}
 
 	return ret;
 }
@@ -420,6 +431,9 @@ void *format_fun(void *arg)
 	misc_set_thread_name("format_sd_thread");
     pthread_detach(pthread_self());
 
+	msg_init(&msg);
+	msg.sender = msg.receiver = SERVER_DEVICE;
+
     ret = get_sd_block_mountpath(block_path, mountpath);
     if(ret < 0)
     {
@@ -492,7 +506,9 @@ void *format_fun(void *arg)
 
 err:
     if(ret)
+    {
     	log_info("format sd error\n");
+    }
     else
     {
     	log_info("format sd success\n");
@@ -502,12 +518,12 @@ err:
     {
     	system("sync");
 		sleep(1);
-		msg_init(&msg);
-		msg.sender = msg.receiver = SERVER_DEVICE;
 		msg.message = MSG_DEVICE_ACTION;
 		msg.arg_in.cat = DEVICE_ACTION_SD_INSERT;
+		msg.arg_in.dog = SD_STATUS_PLUG;
 		server_recorder_message(&msg);
 		server_player_message(&msg);
+		server_miio_message(&msg);
     }
 
 
