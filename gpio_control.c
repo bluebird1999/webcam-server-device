@@ -77,22 +77,22 @@ int ctl_ircut(int on_off)
 	return ret;
 }
 
-int ctl_irled(int on_off)
+int ctl_irled(device_config_t *rconfig, int on_off)
 {
-	//1 -> disable
-	//0 -> enable
+	//1 -> enable
+	//0 -> disable
 	if(on_off != 0 && on_off != 1)
 		return -1;
-	return set_gpio_value(rts_gpio_irled, !on_off);
+	return set_gpio_value(rts_gpio_irled, rconfig->irled_effect_level ? (on_off ? LED_ON : LED_OFF): (on_off ? LED_OFF : LED_ON));
 }
 
-int ctl_motor595_enable(int on_off)
+int ctl_motor595_enable(device_config_t *rconfig, int on_off)
 {
 	//1 -> disable
 	//0 -> enable
 	if(on_off != 0 && on_off != 1)
 		return -1;
-	return set_gpio_value(rts_gpio_motorable, !on_off);
+	return set_gpio_value(rts_gpio_motorable, rconfig->moto_595_effect_level ? (on_off ? LED_ON : LED_OFF): (on_off ? LED_OFF : LED_ON));
 }
 
 int get_led_status(int led_index)
@@ -105,40 +105,32 @@ int get_led_status(int led_index)
 	return -1;
 }
 
-int ctl_spk_enable(int on_off)
+int ctl_spk_enable(device_config_t *rconfig, int on_off)
 {
-	//1 -> disable
-	//0 -> enable
+	//1 -> enable
+	//0 -> disable
 	if(on_off != 0 && on_off != 1)
 		return -1;
 	if(rts_gpio_spk != NULL)
-		return set_gpio_value(rts_gpio_spk, !on_off);
+		return set_gpio_value(rts_gpio_spk, rconfig->spk_effect_level ? (on_off ? LED_ON : LED_OFF): (on_off ? LED_OFF : LED_ON));
 	else
 		return 0;
 }
 
-int set_blue_led_on()
+int set_blue_led_status(device_config_t *rconfig, int on_off)
 {
-	led1_status = LED_ON;
-	return set_gpio_value(rts_gpio_led1, LED_ON);
+	if(led1_status == on_off)
+		return 0;
+	led1_status = on_off;
+	return set_gpio_value(rts_gpio_led1, rconfig->led1_effect_level ? (on_off ? LED_ON : LED_OFF): (on_off ? LED_OFF : LED_ON) );
 }
 
-int set_blue_led_off()
+int set_orange_led_status(device_config_t *rconfig, int on_off)
 {
-	led1_status = LED_OFF;
-	return set_gpio_value(rts_gpio_led1, LED_OFF);
-}
-
-int set_orange_led_on()
-{
-	led2_status = LED_ON;
-	return set_gpio_value(rts_gpio_led2, LED_ON);
-}
-
-int set_orange_led_off()
-{
-	led2_status = LED_OFF;
-	return set_gpio_value(rts_gpio_led2, LED_OFF);
+	if(led2_status == on_off)
+		return 0;
+	led2_status = on_off;
+	return set_gpio_value(rts_gpio_led2, rconfig->led2_effect_level ? (on_off ? LED_ON : LED_OFF): (on_off ? LED_OFF : LED_ON) );
 }
 
 int init_led_gpio(device_config_t *rconfig)
@@ -253,23 +245,23 @@ int init_led_gpio(device_config_t *rconfig)
 
 	if(rconfig->motor_enable)
 	{
-		//motor_enable
-		if(rconfig->motor_595enable_mcu)
-			rts_gpio_motorable = rts_io_gpio_request(DOMAIN_GPIO_MCU, rconfig->motor_595enable);
-		else
-			rts_gpio_motorable = rts_io_gpio_request(DOMAIN_GPIO_SYSTEM, rconfig->motor_595enable);
-		if(!rts_gpio_motorable)
-		{
-			log_qcy(DEBUG_SERIOUS, "can not requset gpio num %d\n", rconfig->motor_595enable);
-			return -1;
-		}
-
-		if(rts_io_gpio_set_direction(rts_gpio_motorable, GPIO_OUTPUT))
-		{
-			log_qcy(DEBUG_SERIOUS, "can not set gpio %d dir\n", rconfig->motor_595enable);
-			rts_io_gpio_free(rts_gpio_motorable);
-			return -1;
-		}
+//		//motor_enable
+//		if(rconfig->motor_595enable_mcu)
+//			rts_gpio_motorable = rts_io_gpio_request(DOMAIN_GPIO_MCU, rconfig->motor_595enable);
+//		else
+//			rts_gpio_motorable = rts_io_gpio_request(DOMAIN_GPIO_SYSTEM, rconfig->motor_595enable);
+//		if(!rts_gpio_motorable)
+//		{
+//			log_qcy(DEBUG_SERIOUS, "can not requset gpio num %d\n", rconfig->motor_595enable);
+//			return -1;
+//		}
+//
+//		if(rts_io_gpio_set_direction(rts_gpio_motorable, GPIO_OUTPUT))
+//		{
+//			log_qcy(DEBUG_SERIOUS, "can not set gpio %d dir\n", rconfig->motor_595enable);
+//			rts_io_gpio_free(rts_gpio_motorable);
+//			return -1;
+//		}
 	}
 
 	return 0;

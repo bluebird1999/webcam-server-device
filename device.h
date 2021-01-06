@@ -16,6 +16,9 @@
 /*
  * define
  */
+#define MOTOR_STEP_X 	1
+#define MOTOR_STEP_Y 	2
+
 #define VOLUME_MIC		0
 #define VOLUME_SPEAKER	1
 

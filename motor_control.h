@@ -80,7 +80,7 @@ typedef struct ptzctrl_info {
 /*
  * function
  */
-int init_motor();
+int init_motor(device_config_t config_t);
 int control_motor(int x_y, int dir, device_config_t config_t);
 int motor_reset();
 void motor_release();

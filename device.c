@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/statfs.h>
+#include <fcntl.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -24,6 +25,7 @@
 #include <rtsavapi.h>
 #include <rtsvideo.h>
 #include <rts_io_adc.h>
+#include <linux/input.h>
 //#include <dmalloc.h>
 //program header
 #include "../../tools/tools_interface.h"
@@ -33,6 +35,7 @@
 #include "../../server/miio/miio_interface.h"
 #include "../../server/miss/miss_interface.h"
 #include "../../server/recorder/recorder_interface.h"
+#include "../../server/speaker/speaker_interface.h"
 //server header
 #include "device.h"
 #include "config.h"
@@ -80,6 +83,7 @@ static server_name_t server_name_tt[] = {
 		{11, "speaker"},
 		{12, "video2"},
 		{13, "scanner"},
+		{14, "video3"},
 		{32, "manager"},
 };
 //function
@@ -123,11 +127,20 @@ static void *led_flash_func(void *arg);
 static void *motor_reset_func(void *arg);
 static char *get_string_name(int i);
 static int video_isp_set_attr(unsigned int id, int value);
+
+
+#define BUTTON_DOWN 1
+#define BUTTON_UP   0
+#define WIFI_RESET_FILE_SH "/opt/qcy/bin/wifi_reset_factory.sh wifi_reset"
+#define FACTORY_RESET_FILE_SH "/opt/qcy/bin/wifi_reset_factory.sh factory"
+
 /*
  * %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
  * %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
  * %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
  */
+
+
 
 static void *motor_reset_func(void *arg)
 {
@@ -226,7 +239,7 @@ static int iot_ctrl_day_night(void* arg)
 		}
 		while(!server_get_status(STATUS_TYPE_EXIT) && daynight_mode_func_exit);
 		ret = ctl_ircut(GPIO_ON);
-		ret |= ctl_irled(GPIO_OFF);
+		ret |= ctl_irled(&device_config_, GPIO_OFF);
 	}
 	else if (tmp->day_night_mode == DAY_NIGHT_ON)
 	{
@@ -239,7 +252,7 @@ static int iot_ctrl_day_night(void* arg)
 		}
 		while(!server_get_status(STATUS_TYPE_EXIT) && daynight_mode_func_exit);
 		ret = ctl_ircut(GPIO_OFF);
-		ret |= ctl_irled(GPIO_ON);
+		ret |= ctl_irled(&device_config_, GPIO_ON);
 	}
 
 	return ret;
@@ -277,7 +290,7 @@ static int iot_ctrl_amplifier(void* arg)
 
 	tmp = (device_iot_config_t *)arg;
 
-	ret = ctl_spk(&tmp->amp_on_off);
+	ret = ctl_spk(&device_config_, &tmp->amp_on_off);
 
 	return ret;
 }
@@ -302,7 +315,7 @@ static int iot_ctrl_led(void* arg)
 			led1_flash_tid = 0;
 		}
 		while(!server_get_status(STATUS_TYPE_EXIT) && led_flash_func_exit);
-		ret = set_blue_led_on();
+		ret = set_blue_led_status(&device_config_, LED_ON);
 	}
 	else if (tmp->led1_onoff == LED_OFF)
 	{
@@ -312,7 +325,7 @@ static int iot_ctrl_led(void* arg)
 			led1_flash_tid = 0;
 		}
 		while(!server_get_status(STATUS_TYPE_EXIT) && led_flash_func_exit);
-		ret = set_blue_led_off();
+		ret = set_blue_led_status(&device_config_, LED_OFF);
 	}
 	else if (tmp->led1_onoff == LED_FLASH) 	//twinkle
 	{
@@ -338,7 +351,7 @@ static int iot_ctrl_led(void* arg)
 			led2_flash_tid = 0;
 		}
 		while(!server_get_status(STATUS_TYPE_EXIT) && led_flash_func_exit);
-		ret = set_orange_led_on();
+		ret = set_orange_led_status(&device_config_, LED_ON);
 	}
 	else if (tmp->led2_onoff == LED_OFF)
 	{
@@ -349,7 +362,7 @@ static int iot_ctrl_led(void* arg)
 		}
 		while(!server_get_status(STATUS_TYPE_EXIT) && led_flash_func_exit);
 
-		ret = set_orange_led_off();
+		ret = set_orange_led_status(&device_config_, LED_OFF);
 	}
 	else if (tmp->led2_onoff == LED_FLASH) 	//twinkle
 	{
@@ -551,6 +564,9 @@ static int send_message(int receiver, message_t *msg)
 		break;
 	case SERVER_RECORDER:
 		st = server_recorder_message(msg);
+		break;
+	case SERVER_SPEAKER:
+		st = server_speaker_message(msg);
 		break;
 	case SERVER_PLAYER:
 		st = server_player_message(msg);
@@ -754,19 +770,19 @@ static int server_message_proc(void)
 			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
 					NULL, 0);
 		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_HOR_LEFT ) {
-			ret = iot_ctrl_motor(MOTOR_X, DIR_LEFT);
+			ret = iot_ctrl_motor(MOTOR_STEP_Y, DIR_LEFT);
 			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
 					NULL, 0);
 		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_HOR_RIGHT ) {
-			ret = iot_ctrl_motor(MOTOR_X, DIR_RIGHT);
+			ret = iot_ctrl_motor(MOTOR_STEP_Y, DIR_RIGHT);
 			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
 					NULL, 0);
 		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_VER_DOWN ) {
-			ret = iot_ctrl_motor(MOTOR_Y, DIR_DOWN);
+			ret = iot_ctrl_motor(MOTOR_STEP_X, DIR_DOWN);
 			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
 					NULL, 0);
 		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_VER_UP ) {
-			ret = iot_ctrl_motor(MOTOR_Y, DIR_UP);
+			ret = iot_ctrl_motor(MOTOR_STEP_X, DIR_UP);
 			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
 					NULL, 0);
 		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_RESET ) {
@@ -831,12 +847,18 @@ static void *storage_detect_func(void *arg)
 	int ret = 0;
 	message_t msg;
 	char *ptr = NULL;
+	int event_fd = 0;
 	server_status_t st;
 	struct statfs statFS;
+	int hotplug_sock = 0;
 	struct sockaddr_nl snl;
 	unsigned long freeBytes;
 	char buf[SIZE1024] = {0};
+	struct input_event event;
 	struct timeval timeout={0,1};
+	unsigned int start_time = 0;
+	unsigned int end_time = 0;
+	unsigned int interval_time = 0;
 
     signal(SIGINT, (__sighandler_t)server_thread_termination);
     signal(SIGTERM, (__sighandler_t)server_thread_termination);
@@ -853,7 +875,7 @@ static void *storage_detect_func(void *arg)
     snl.nl_family = AF_NETLINK;
 	snl.nl_pid = getpid();
 	snl.nl_groups = 1;
-	int hotplug_sock = socket(PF_NETLINK, SOCK_DGRAM, NETLINK_KOBJECT_UEVENT);
+	hotplug_sock = socket(PF_NETLINK, SOCK_DGRAM, NETLINK_KOBJECT_UEVENT);
 	if (hotplug_sock == -1) {
 		log_qcy(DEBUG_SERIOUS, "error getting socket");
 		goto error;
@@ -864,6 +886,17 @@ static void *storage_detect_func(void *arg)
     	log_qcy(DEBUG_SERIOUS, "system_hotplug_recelve bind failed");
         goto error;
     }
+
+    if(device_config_.reset_key_detect_enable)
+    {
+	    event_fd = open("/dev/input/event0", O_RDONLY);
+		if(event_fd == -1)
+		{
+			log_qcy(DEBUG_SERIOUS, "open error\n");
+			goto error;
+		}
+    }
+
 
     while(!server_get_status(STATUS_TYPE_EXIT))
     {
@@ -878,10 +911,12 @@ static void *storage_detect_func(void *arg)
 
     	FD_ZERO(&fds);
     	FD_SET(hotplug_sock,&fds);
+    	if(device_config_.reset_key_detect_enable)
+    		FD_SET(event_fd,&fds);
     	timeout.tv_sec=3;
     	timeout.tv_usec=0;
 
-        switch(select(hotplug_sock + 1,&fds,NULL,NULL,&timeout))
+        switch(select((hotplug_sock > event_fd ? hotplug_sock+1 : event_fd +1),&fds,NULL,NULL,&timeout))
         {
             case -1:
             	log_qcy(DEBUG_SERIOUS, "select error");
@@ -926,6 +961,7 @@ static void *storage_detect_func(void *arg)
 								umount_flag = 0;
 								msg.message = MSG_DEVICE_ACTION;
 								msg.arg_in.cat = DEVICE_ACTION_SD_INSERT;
+								msg.arg_in.dog = SD_STATUS_PLUG;
 								while(!is_mounted(device_config_.sd_mount_path))
 									usleep(1000 * 500);
 
@@ -964,6 +1000,43 @@ static void *storage_detect_func(void *arg)
                     	}
                     }
                 }
+                if(device_config_.reset_key_detect_enable && FD_ISSET(event_fd,&fds))
+				{
+                	ret = read(event_fd, &event, sizeof(event));
+                	if(ret < 0)
+                	{
+                		log_qcy(DEBUG_SERIOUS, "input read error\n");
+                		goto error;
+                	}
+                	if(event.code == KEY_WPS_BUTTON)
+                	{
+                		if(event.value == BUTTON_DOWN)
+                		{
+                			log_qcy(DEBUG_SERIOUS, "wps key down\n");
+                			start_time = time_get_now_ms();
+                		}
+                		else if(event.value == BUTTON_UP)
+                		{
+                			log_qcy(DEBUG_SERIOUS, "wps key up\n");
+                			end_time = time_get_now_ms();
+
+                			interval_time = end_time - start_time;
+                			if(interval_time > 3000 && interval_time < 10000)
+                			{
+                				msg.message = MSG_SPEAKER_CTL_PLAY;
+                				msg.arg_in.cat = DEVICE_ACTION_SD_CAP_ALARM;
+                				msg.arg_in.cat = SPEAKER_CTL_RESET;
+                				send_message(SERVER_SPEAKER, &msg);
+                				sleep(3);
+                				system(WIFI_RESET_FILE_SH);
+                			}
+                			else if (interval_time > 10000)
+                			{
+                				system(FACTORY_RESET_FILE_SH);
+                			}
+                		}
+                	}
+				}
                 break;
         }
     }
@@ -971,7 +1044,10 @@ static void *storage_detect_func(void *arg)
 error:
 	log_qcy(DEBUG_SERIOUS, "-----%s thread exit -----", "storage_detect_thread");
 	storage_detect_func_lock = 0;
-	close(hotplug_sock);
+	if(hotplug_sock)
+		close(hotplug_sock);
+	if(event_fd)
+		close(event_fd);
 	hotplug_sock = -1;
 	pthread_exit(0);
 }
@@ -985,7 +1061,7 @@ static void *motor_init_func(void *arg)
 	misc_set_thread_name("motor_init_func");
     pthread_detach(pthread_self());
 
-	ret = init_motor();
+	ret = init_motor(device_config_);
 	if(ret)
 	{
 		log_qcy(DEBUG_SERIOUS, "init_motor init failed");
@@ -1053,18 +1129,18 @@ static void *led_flash_func(void *arg)
 
     	if(*(int *)arg == 1)
     	{
-    		set_blue_led_on();
+    		set_blue_led_status(&device_config_, LED_ON);
     	}else{
-    		set_orange_led_on();
+    		set_orange_led_status(&device_config_, LED_ON);
     	}
 
     	usleep(*(int *)((int *)arg + 1));
 
     	if(*(int *)arg == 1)
     	{
-    		set_blue_led_off();
+    		set_blue_led_status(&device_config_, LED_OFF);
     	}else{
-    		set_orange_led_off();
+    		set_orange_led_status(&device_config_, LED_OFF);
     	}
 
     	usleep(*(int *)((int *)arg + 2));
@@ -1118,7 +1194,7 @@ static void *daynight_mode_func(void *arg)
 			{
     			//night
 				ret = ctl_ircut(GPIO_OFF);
-				ret |= ctl_irled(GPIO_ON);
+				ret |= ctl_irled(&device_config_, GPIO_ON);
 
 				video_isp_set_attr(RTS_VIDEO_CTRL_ID_IR_MODE, RTS_ISP_IR_NIGHT);
 				video_isp_set_attr(RTS_VIDEO_CTRL_ID_GRAY_MODE, RTS_ISP_IR_NIGHT);
@@ -1126,7 +1202,7 @@ static void *daynight_mode_func(void *arg)
 			} else {
 				//day
 				ret = ctl_ircut(GPIO_ON);
-				ret |= ctl_irled(GPIO_OFF);
+				ret |= ctl_irled(&device_config_, GPIO_OFF);
 
 				video_isp_set_attr(RTS_VIDEO_CTRL_ID_IR_MODE, RTS_ISP_IR_DAY);
 				video_isp_set_attr(RTS_VIDEO_CTRL_ID_GRAY_MODE, RTS_ISP_IR_DAY);
@@ -1139,11 +1215,11 @@ static void *daynight_mode_func(void *arg)
 			{
 				//day
 				ret = ctl_ircut(GPIO_ON);
-				ret |= ctl_irled(GPIO_OFF);
+				ret |= ctl_irled(&device_config_, GPIO_OFF);
 			} else {
 				//night
 				ret = ctl_ircut(GPIO_OFF);
-				ret |= ctl_irled(GPIO_ON);
+				ret |= ctl_irled(&device_config_, GPIO_ON);
 			}
     	}
 
@@ -1241,9 +1317,9 @@ static int server_start(void)
 
 	//day mode
 	ret = ctl_ircut(GPIO_ON);
-	ret |= ctl_irled(GPIO_OFF);
+	ret |= ctl_irled(&device_config_ ,GPIO_OFF);
 
-	ret = ctl_spk_enable(GPIO_OFF);
+	ret = ctl_spk_enable(&device_config_, GPIO_OFF);
 	if(ret)
 	{
 		log_qcy(DEBUG_SERIOUS, "close spk failed\n");

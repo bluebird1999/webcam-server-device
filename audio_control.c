@@ -17,11 +17,11 @@
 static int value_cur;
 static int value_input_cur;
 
-int ctl_spk(int *para)
+int ctl_spk(device_config_t *config_t, int *para)
 {
 	int ret;
 
-	ret = ctl_spk_enable(*para);
+	ret = ctl_spk_enable(config_t, *para);
 	return ret;
 }
 

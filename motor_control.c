@@ -41,14 +41,14 @@ int motor_reset()
 	return ret;
 }
 
-int init_motor()
+int init_motor(device_config_t config_t)
 {
 	int ret = 0;
 
 	memset(&ptz_info, 0, sizeof(ptzctrl_info_t));
 
 	//enable 595
-	ctl_motor595_enable(1);
+	ctl_motor595_enable(&config_t ,1);
 
 	fd = open("/dev/rts-ptz", O_RDWR);
 	if(!fd)
