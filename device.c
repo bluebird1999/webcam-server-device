@@ -132,7 +132,6 @@ static int video_isp_set_attr(unsigned int id, int value);
 #define BUTTON_DOWN 1
 #define BUTTON_UP   0
 #define WIFI_RESET_FILE_SH "/opt/qcy/bin/wifi_reset_factory.sh wifi_reset"
-#define FACTORY_RESET_FILE_SH "/opt/qcy/bin/wifi_reset_factory.sh factory"
 
 /*
  * %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -859,6 +858,7 @@ static void *storage_detect_func(void *arg)
 	unsigned int start_time = 0;
 	unsigned int end_time = 0;
 	unsigned int interval_time = 0;
+	int key_down_flag = 0;
 
     signal(SIGINT, (__sighandler_t)server_thread_termination);
     signal(SIGTERM, (__sighandler_t)server_thread_termination);
@@ -945,6 +945,16 @@ static void *storage_detect_func(void *arg)
 						}
 					}
                 }
+                if(key_down_flag)
+                {
+                	key_down_flag = 0;
+                	msg.message = MSG_SPEAKER_CTL_PLAY;
+					msg.arg_in.cat = DEVICE_ACTION_SD_CAP_ALARM;
+					msg.arg_in.cat = SPEAKER_CTL_RESET;
+					send_message(SERVER_SPEAKER, &msg);
+					sleep(5);
+					system(WIFI_RESET_FILE_SH);
+                }
                 break;
             default:
                 if(FD_ISSET(hotplug_sock,&fds))
@@ -1013,28 +1023,25 @@ static void *storage_detect_func(void *arg)
                 		if(event.value == BUTTON_DOWN)
                 		{
                 			log_qcy(DEBUG_SERIOUS, "wps key down\n");
-                			start_time = time_get_now_ms();
+                			key_down_flag = 1;
+                			//start_time = time_get_now_ms();
                 		}
-                		else if(event.value == BUTTON_UP)
-                		{
-                			log_qcy(DEBUG_SERIOUS, "wps key up\n");
-                			end_time = time_get_now_ms();
-
-                			interval_time = end_time - start_time;
-                			if(interval_time > 3000 && interval_time < 10000)
-                			{
-                				msg.message = MSG_SPEAKER_CTL_PLAY;
-                				msg.arg_in.cat = DEVICE_ACTION_SD_CAP_ALARM;
-                				msg.arg_in.cat = SPEAKER_CTL_RESET;
-                				send_message(SERVER_SPEAKER, &msg);
-                				sleep(3);
-                				system(WIFI_RESET_FILE_SH);
-                			}
-                			else if (interval_time > 10000)
-                			{
-                				system(FACTORY_RESET_FILE_SH);
-                			}
-                		}
+//                		else if(event.value == BUTTON_UP)
+//                		{
+//                			log_qcy(DEBUG_SERIOUS, "wps key up\n");
+//                			end_time = time_get_now_ms();
+//
+//                			interval_time = end_time - start_time;
+//                			if(interval_time > 3000 && interval_time < 10000)
+//                			{
+//                				msg.message = MSG_SPEAKER_CTL_PLAY;
+//                				msg.arg_in.cat = DEVICE_ACTION_SD_CAP_ALARM;
+//                				msg.arg_in.cat = SPEAKER_CTL_RESET;
+//                				send_message(SERVER_SPEAKER, &msg);
+//                				sleep(3);
+//                				system(WIFI_RESET_FILE_SH);
+//                			}
+//                		}
                 	}
 				}
                 break;
