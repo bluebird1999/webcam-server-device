@@ -730,8 +730,7 @@ static int server_message_proc(void)
 
 			misc_set_bit(&umount_server_flag, msg.receiver, 1);
 			format_flag |= msg.arg_pass.wolf;
-
-			if(umount_server_flag == 1664)
+			if(umount_server_flag == 1536)
 			{
 				system("sync");
 				system("sync");
@@ -855,9 +854,6 @@ static void *storage_detect_func(void *arg)
 	char buf[SIZE1024] = {0};
 	struct input_event event;
 	struct timeval timeout={0,1};
-	unsigned int start_time = 0;
-	unsigned int end_time = 0;
-	unsigned int interval_time = 0;
 	int key_down_flag = 0;
 
     signal(SIGINT, (__sighandler_t)server_thread_termination);
@@ -1113,7 +1109,6 @@ static int video_isp_set_attr(unsigned int id, int value)
 
 static void *led_flash_func(void *arg)
 {
-	int ret = 0;
 	server_status_t st;
 
     signal(SIGINT, (__sighandler_t)server_thread_termination);
@@ -1164,6 +1159,7 @@ static void *daynight_mode_func(void *arg)
 {
 	int ret = 0;
 	int value = 0;
+	int old_value = 0;
 	int lim_value = 0;
 	server_status_t st;
 
@@ -1195,39 +1191,49 @@ static void *daynight_mode_func(void *arg)
     	if(device_config_.soft_hard_ldr)
     	{
     		value = rts_av_get_isp_daynight_statis();
-    		log_qcy(DEBUG_SERIOUS, "day night mode value = %d", value);
+    		log_qcy(DEBUG_VERBOSE, "day night mode value = %d", value);
 
-    		if(value >= lim_value)
-			{
-    			//night
-				ret = ctl_ircut(GPIO_OFF);
-				ret |= ctl_irled(&device_config_, GPIO_ON);
+    		if(value != old_value)
+    		{
+				if(value >= lim_value)
+				{
+					//night
+					old_value = value;
+					ret = ctl_ircut(GPIO_OFF);
+					ret |= ctl_irled(&device_config_, GPIO_ON);
 
-				video_isp_set_attr(RTS_VIDEO_CTRL_ID_IR_MODE, RTS_ISP_IR_NIGHT);
-				video_isp_set_attr(RTS_VIDEO_CTRL_ID_GRAY_MODE, RTS_ISP_IR_NIGHT);
+					video_isp_set_attr(RTS_VIDEO_CTRL_ID_IR_MODE, RTS_ISP_IR_NIGHT);
+					video_isp_set_attr(RTS_VIDEO_CTRL_ID_GRAY_MODE, RTS_ISP_IR_NIGHT);
 
-			} else {
-				//day
-				ret = ctl_ircut(GPIO_ON);
-				ret |= ctl_irled(&device_config_, GPIO_OFF);
+				} else {
+					//day
+					old_value = value;
+					ret = ctl_ircut(GPIO_ON);
+					ret |= ctl_irled(&device_config_, GPIO_OFF);
 
-				video_isp_set_attr(RTS_VIDEO_CTRL_ID_IR_MODE, RTS_ISP_IR_DAY);
-				video_isp_set_attr(RTS_VIDEO_CTRL_ID_GRAY_MODE, RTS_ISP_IR_DAY);
-			}
+					video_isp_set_attr(RTS_VIDEO_CTRL_ID_IR_MODE, RTS_ISP_IR_DAY);
+					video_isp_set_attr(RTS_VIDEO_CTRL_ID_GRAY_MODE, RTS_ISP_IR_DAY);
+				}
+    		}
     	} else {
     		value = rts_io_adc_get_value(ADC_CHANNEL_0);
-    		log_qcy(DEBUG_SERIOUS, "day night mode value = %d", value);
+    		log_qcy(DEBUG_VERBOSE, "day night mode value = %d", value);
 
-    		if(value >= lim_value)
-			{
-				//day
-				ret = ctl_ircut(GPIO_ON);
-				ret |= ctl_irled(&device_config_, GPIO_OFF);
-			} else {
-				//night
-				ret = ctl_ircut(GPIO_OFF);
-				ret |= ctl_irled(&device_config_, GPIO_ON);
-			}
+    		if(value != old_value)
+    		{
+				if(value >= lim_value)
+				{
+					//day
+					old_value = value;
+					ret = ctl_ircut(GPIO_ON);
+					ret |= ctl_irled(&device_config_, GPIO_OFF);
+				} else {
+					//night
+					old_value = value;
+					ret = ctl_ircut(GPIO_OFF);
+					ret |= ctl_irled(&device_config_, GPIO_ON);
+				}
+    		}
     	}
 
     	if(ret)
