@@ -36,8 +36,8 @@ static struct rts_gpio *rts_gpio_ircutbin  		= NULL;
 static struct rts_gpio *rts_gpio_irled		  	= NULL;
 static struct rts_gpio *rts_gpio_motorable		= NULL;
 
-static int led1_status = 0;
-static int led2_status = 0;
+static int led1_status = -1;
+static int led2_status = -1;
 
 static int set_gpio_value(struct rts_gpio *rts_gpio, int value);
 

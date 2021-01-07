@@ -16,7 +16,7 @@
 /*
  * define
  */
-#define		SERVER_DEVICE_VERSION_STRING		"alpha-4.5.2"
+#define		SERVER_DEVICE_VERSION_STRING		"alpha-4.5.3"
 
 //control
 #define		DEVICE_CTRL_SD_INFO					0x0001
