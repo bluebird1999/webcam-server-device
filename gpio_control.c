@@ -112,7 +112,7 @@ int ctl_spk_enable(device_config_t *rconfig, int on_off)
 	if(on_off != 0 && on_off != 1)
 		return -1;
 	if(rts_gpio_spk != NULL)
-		return set_gpio_value(rts_gpio_spk, rconfig->spk_effect_level ? (on_off ? LED_ON : LED_OFF): (on_off ? LED_OFF : LED_ON));
+		return set_gpio_value(rts_gpio_spk, rconfig->spk_effect_level ? (on_off ? LED_ON : LED_OFF): (on_off ? LED_OFF : LED_ON) );
 	else
 		return 0;
 }
