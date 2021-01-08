@@ -22,6 +22,24 @@ static int fd = 0;
 static ptzctrl_info_t ptz_info;
 static int motor_status = MOTOR_NONE;
 
+int check_motor_res_status()
+{
+	if(motor_status != MOTOR_READY)
+	{
+		log_qcy(DEBUG_SERIOUS, "motor not ready");
+		return -1;
+	}
+
+	ioctl(fd, RTS_PTZ_IOC_G_INFO, &ptz_info);
+
+	log_qcy(DEBUG_SERIOUS, "x is %d, y is %d\n", ptz_info.xmotor_info.pos, ptz_info.ymotor_info.pos);
+	if((ptz_info.xmotor_info.pos == ptz_info.xmotor_info.max_steps / 2) && (ptz_info.ymotor_info.pos == ptz_info.ymotor_info.max_steps / 2))
+		return 0;
+	else
+		return -1;
+
+}
+
 int motor_reset()
 {
 	int ret = 0;

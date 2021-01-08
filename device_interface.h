@@ -16,7 +16,7 @@
 /*
  * define
  */
-#define		SERVER_DEVICE_VERSION_STRING		"alpha-4.5.4"
+#define		SERVER_DEVICE_VERSION_STRING		"alpha-4.5.5"
 
 //control
 #define		DEVICE_CTRL_SD_INFO					0x0001
@@ -48,6 +48,7 @@
 #define		DEVICE_ACTION_SD_EJECTED			0x0006
 #define		DEVICE_ACTION_SD_EJECTED_ACK		0x1006
 #define		DEVICE_ACTION_SD_CAP_ALARM			0x0007
+#define		DEVICE_ACTION_MOTO_RES_OK			0x0008
 
 
 //message

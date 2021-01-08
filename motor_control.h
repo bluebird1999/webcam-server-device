@@ -26,8 +26,8 @@
 #define DIR_UP			1
 #define DIR_DOWN		-1
 //for MOTOR_X
-#define DIR_RIGHT		1
-#define DIR_LEFT		-1
+#define DIR_RIGHT		-1
+#define DIR_LEFT		1
 #define DIR_LEFT_UP		2
 #define DIR_LEFT_DOWN	3
 #define DIR_RIGHT_UP	4
@@ -83,6 +83,7 @@ typedef struct ptzctrl_info {
 int init_motor(device_config_t config_t);
 int control_motor(int x_y, int dir, device_config_t config_t);
 int motor_reset();
+int check_motor_res_status();
 void motor_release();
 int motor_auto_move();
 int motor_auto_move_stop();

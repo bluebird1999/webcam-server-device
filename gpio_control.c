@@ -103,6 +103,9 @@ int get_led_status(int led_index)
 		return led2_status;
 
 	return -1;
+
+
+
 }
 
 int ctl_spk_enable(device_config_t *rconfig, int on_off)

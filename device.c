@@ -61,6 +61,7 @@ static int 					motor_reset_thread_flag = 0;
 static int					umount_server_flag = 0;
 static int					umount_flag = 0;
 static int					step_motor_init_flag = 0;
+static int					motor_check_flag = 0;
 static device_config_t		device_config_;
 static server_info_t 		info;
 static message_buffer_t		message;
@@ -945,11 +946,23 @@ static void *storage_detect_func(void *arg)
                 {
                 	key_down_flag = 0;
                 	msg.message = MSG_SPEAKER_CTL_PLAY;
-					msg.arg_in.cat = DEVICE_ACTION_SD_CAP_ALARM;
-					msg.arg_in.cat = SPEAKER_CTL_RESET;
+                	msg.arg_in.cat = SPEAKER_CTL_RESET;
 					send_message(SERVER_SPEAKER, &msg);
 					sleep(5);
 					system(WIFI_RESET_FILE_SH);
+                }
+                if(device_config_.motor_enable)
+                {
+					if(!motor_check_flag)
+					{
+						if(!check_motor_res_status())
+						{
+							msg.message = MSG_DEVICE_ACTION;
+							msg.arg_in.cat = DEVICE_ACTION_MOTO_RES_OK;
+							send_message(SERVER_MIIO, &msg);
+							motor_check_flag = 1;
+						}
+					}
                 }
                 break;
             default:
