@@ -1035,9 +1035,10 @@ static void *storage_detect_func(void *arg)
                 			key_down_flag = 1;
                 			//start_time = time_get_now_ms();
                 		}
-//                		else if(event.value == BUTTON_UP)
-//                		{
-//                			log_qcy(DEBUG_SERIOUS, "wps key up\n");
+                		else if(event.value == BUTTON_UP)
+                		{
+                			log_qcy(DEBUG_SERIOUS, "wps key up\n");
+                			key_down_flag = 0;
 //                			end_time = time_get_now_ms();
 //
 //                			interval_time = end_time - start_time;
@@ -1050,7 +1051,7 @@ static void *storage_detect_func(void *arg)
 //                				sleep(3);
 //                				system(WIFI_RESET_FILE_SH);
 //                			}
-//                		}
+                		}
                 	}
 				}
                 break;
