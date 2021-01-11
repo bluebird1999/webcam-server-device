@@ -1173,8 +1173,9 @@ static void *daynight_mode_func(void *arg)
 {
 	int ret = 0;
 	int value = 0;
-	int old_value = 0;
+	int old_value = -1;
 	int lim_value = 0;
+	int discard_count = 0;
 	server_status_t st;
 
     signal(SIGINT, (__sighandler_t)server_thread_termination);
@@ -1191,6 +1192,9 @@ static void *daynight_mode_func(void *arg)
 
 	daynight_mode_func_lock = 1;
 
+	//wait video init
+	usleep(1000 * 1000 * 5); //5s
+
     while(!server_get_status(STATUS_TYPE_EXIT) && !daynight_mode_func_exit)
     {
 		//exit logic
@@ -1205,30 +1209,40 @@ static void *daynight_mode_func(void *arg)
     	if(device_config_.soft_hard_ldr)
     	{
     		value = rts_av_get_isp_daynight_statis();
-    		log_qcy(DEBUG_VERBOSE, "day night mode value = %d", value);
+    		log_qcy(DEBUG_SERIOUS, "day night mode value = %d", value);
 
-    		if(value != old_value)
+    		if(value == 2)
     		{
-				if(value >= lim_value)
+				video_isp_set_attr(RTS_VIDEO_CTRL_ID_IR_MODE, RTS_ISP_IR_NIGHT);
+				video_isp_set_attr(RTS_VIDEO_CTRL_ID_GRAY_MODE, RTS_ISP_IR_NIGHT);
+    		}
+
+    		if(discard_count > 4 && value >= 0 && value < 2)
+    		{
+				if(value != old_value)
 				{
-					//night
-					old_value = value;
-					ret = ctl_ircut(GPIO_OFF);
-					ret |= ctl_irled(&device_config_, GPIO_ON);
+					if(value >= lim_value)
+					{
+						//night
+						old_value = value;
+						ret = ctl_ircut(GPIO_OFF);
+						ret |= ctl_irled(&device_config_, GPIO_ON);
 
-					video_isp_set_attr(RTS_VIDEO_CTRL_ID_IR_MODE, RTS_ISP_IR_NIGHT);
-					video_isp_set_attr(RTS_VIDEO_CTRL_ID_GRAY_MODE, RTS_ISP_IR_NIGHT);
+						video_isp_set_attr(RTS_VIDEO_CTRL_ID_IR_MODE, RTS_ISP_IR_NIGHT);
+						video_isp_set_attr(RTS_VIDEO_CTRL_ID_GRAY_MODE, RTS_ISP_IR_NIGHT);
 
-				} else {
-					//day
-					old_value = value;
-					ret = ctl_ircut(GPIO_ON);
-					ret |= ctl_irled(&device_config_, GPIO_OFF);
+					} else {
+						//day
+						old_value = value;
+						ret = ctl_ircut(GPIO_ON);
+						ret |= ctl_irled(&device_config_, GPIO_OFF);
 
-					video_isp_set_attr(RTS_VIDEO_CTRL_ID_IR_MODE, RTS_ISP_IR_DAY);
-					video_isp_set_attr(RTS_VIDEO_CTRL_ID_GRAY_MODE, RTS_ISP_IR_DAY);
+						video_isp_set_attr(RTS_VIDEO_CTRL_ID_IR_MODE, RTS_ISP_IR_DAY);
+						video_isp_set_attr(RTS_VIDEO_CTRL_ID_GRAY_MODE, RTS_ISP_IR_DAY);
+					}
 				}
     		}
+    		discard_count++;
     	} else {
     		value = rts_io_adc_get_value(ADC_CHANNEL_0);
     		log_qcy(DEBUG_VERBOSE, "day night mode value = %d", value);
