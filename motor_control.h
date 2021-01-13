@@ -33,7 +33,10 @@
 #define DIR_RIGHT_UP	4
 #define DIR_RIGHT_DOWN	5
 
-
+#define DIR_AUTO_UP		1
+#define DIR_AUTO_DOWN	2
+#define DIR_AUTO_LEFT	3
+#define DIR_AUTO_RIGHT	4
 
 #define SPEED_NORMAL	2
 #define SPEED_LOW		1
@@ -85,7 +88,8 @@ int control_motor(int x_y, int dir, device_config_t config_t);
 int motor_reset();
 int check_motor_res_status();
 void motor_release();
-int motor_auto_move();
+int motor_auto_move(int dir, device_config_t config_t);
 int motor_auto_move_stop();
+int motor_auto_roate(unsigned int x_step, int x_dir, unsigned int y_step, int y_dir, device_config_t config_t);
 
 #endif /* MOTOR_CONTRIL_H_ */

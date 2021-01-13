@@ -16,7 +16,7 @@
 /*
  * define
  */
-#define		SERVER_DEVICE_VERSION_STRING		"alpha-4.5.7"
+#define		SERVER_DEVICE_VERSION_STRING		"alpha-4.5.8"
 
 //control
 #define		DEVICE_CTRL_SD_INFO					0x0001
@@ -35,8 +35,9 @@
 #define		DEVICE_CTRL_MOTOR_LEFT_DOWN			0x0015
 #define		DEVICE_CTRL_MOTOR_RIGHT_UP			0x0016
 #define		DEVICE_CTRL_MOTOR_RIGHT_DOWN		0x0017
-#define		DEVICE_CTRL_MOTOR_AUTO				0x0018
+#define		DEVICE_CTRL_MOTOR_AUTO				0x0f18
 #define		DEVICE_CTRL_MOTOR_STOP				0x0019
+#define		DEVICE_CTRL_MOTOR_ROTATE			0x0020
 
 //need times, about 48s
 #define 	DEVICE_CTRL_MOTOR_RESET				0x0013

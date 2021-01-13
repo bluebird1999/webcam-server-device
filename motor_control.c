@@ -93,28 +93,83 @@ err:
 
 int motor_auto_move_stop()
 {
-//	if(motor_status != MOTOR_AUTO_MOVE)
-//	{
-//		log_qcy(DEBUG_SERIOUS, "motor not in auto move status");
-//		return -1;
-//	}
-//
-//	motor_status = MOTOR_READY;
-//	return 0;
-	log_qcy(DEBUG_SERIOUS, "motor_auto_move_stop");
+	if(motor_status != MOTOR_AUTO_MOVE)
+	{
+		log_qcy(DEBUG_SERIOUS, "motor not in auto move status");
+		return -1;
+	}
+
+	ioctl(fd, RTS_PTZ_IOC_STOP, NULL);
+
+	motor_status = MOTOR_READY;
+
+	log_qcy(DEBUG_SERIOUS, "-- motor_auto_move_stop");
 	return 0;
 }
 
-int motor_auto_move()
+int motor_auto_roate(unsigned int x_step, int x_dir, unsigned int y_step, int y_dir, device_config_t config_t)
 {
-//	if(motor_status != MOTOR_READY)
-//	{
-//		log_qcy(DEBUG_SERIOUS, "motor not ready");
-//		return -1;
-//	}
-//
-//	motor_status = MOTOR_AUTO_MOVE;
-//	return 0;
+	if(motor_status != MOTOR_READY)
+	{
+		log_qcy(DEBUG_SERIOUS, "motor not ready");
+		return -1;
+	}
+
+	motor_status = MOTOR_CTRL;
+
+	memset(&ptz_info, 0, sizeof(ptzctrl_info_t));
+
+	ptz_info.xmotor_info.steps = x_step;
+	ptz_info.ymotor_info.steps = y_step;
+	ptz_info.xmotor_info.dir = x_dir;
+	ptz_info.ymotor_info.dir = y_dir;
+	ptz_info.xmotor_info.speed = config_t.motor_speed;
+	ptz_info.ymotor_info.speed = config_t.motor_speed;
+
+	ioctl(fd, RTS_PTZ_IOC_DRIVE, &ptz_info);
+
+	log_qcy(DEBUG_SERIOUS, "-- motor_auto_roate");
+	motor_status = MOTOR_READY;
+	return 0;
+}
+
+int motor_auto_move(int dir, device_config_t config_t)
+{
+	if(motor_status != MOTOR_READY)
+	{
+		log_qcy(DEBUG_SERIOUS, "motor not ready");
+		return -1;
+	}
+
+	memset(&ptz_info, 0, sizeof(ptzctrl_info_t));
+
+	switch(dir)
+	{
+		case DIR_AUTO_LEFT :
+			ptz_info.xmotor_info.dir = DIR_LEFT;
+			break;
+		case DIR_AUTO_RIGHT:
+			ptz_info.xmotor_info.dir = DIR_RIGHT;
+			break;
+		case DIR_AUTO_UP:
+			ptz_info.ymotor_info.dir = DIR_UP;
+			break;
+		case DIR_AUTO_DOWN:
+			ptz_info.ymotor_info.dir = DIR_DOWN;
+			break;
+		default:
+			log_qcy(DEBUG_SERIOUS, "not support dir");
+			ptz_info.xmotor_info.dir = DIR_NONE;
+			ptz_info.ymotor_info.dir = DIR_NONE;
+			break;
+	}
+
+	ptz_info.xmotor_info.speed = config_t.motor_speed;
+	ptz_info.ymotor_info.speed = config_t.motor_speed;
+
+	ioctl(fd, RTS_PTZ_IOC_RUN, &ptz_info);
+
+	motor_status = MOTOR_AUTO_MOVE;
 	log_qcy(DEBUG_SERIOUS, "motor_auto_move");
 	return 0;
 }
@@ -128,6 +183,8 @@ int control_motor(int x_y, int dir, device_config_t config_t)
 	}
 
 	motor_status = MOTOR_CTRL;
+
+	memset(&ptz_info, 0, sizeof(ptzctrl_info_t));
 
 	if(x_y == MOTOR_X)
 	{

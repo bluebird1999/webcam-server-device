@@ -117,7 +117,7 @@ static int iot_adjust_volume(void* arg);
 static int iot_ctrl_led(void* arg);
 static int iot_ctrl_amplifier(void* arg);
 static int iot_ctrl_day_night(void* arg);
-static int iot_ctrl_motor_auto(int status);
+static int iot_ctrl_motor_auto(message_arg_t arg_in, int status);
 static int iot_ctrl_motor(int x_y, int dir);
 static int iot_ctrl_motor_reset();
 static int iot_umount_sd(int umount_orformat);
@@ -189,15 +189,58 @@ static int iot_ctrl_motor(int x_y, int dir)
 	return ret;
 }
 
-static int iot_ctrl_motor_auto(int status)
+static int iot_ctrl_motor_auto(message_arg_t arg_in, int status)
 {
 	int ret = 0;
+	int dir = arg_in.cat;
 
 	if(status == MOTOR_AUTO)
 	{
-		ret = motor_auto_move();
+		switch(dir)
+		{
+			case DEVICE_CTRL_MOTOR_HOR_LEFT :
+				dir = DIR_AUTO_UP;
+				break;
+			case DEVICE_CTRL_MOTOR_HOR_RIGHT:
+				dir = DIR_AUTO_DOWN ;
+				break;
+			case DEVICE_CTRL_MOTOR_VER_UP:
+				dir = DIR_AUTO_LEFT;
+				break;
+			case DEVICE_CTRL_MOTOR_VER_DOWN:
+				dir = DIR_AUTO_RIGHT;
+				break;
+			default:
+				log_qcy(DEBUG_SERIOUS, "not support dir");
+				dir = DIR_NONE;
+				dir = DIR_NONE;
+				break;
+		}
+
+		ret = motor_auto_move(dir, device_config_);
 	} else if(status == MOTOR_STOP) {
 		ret = motor_auto_move_stop();
+	} else if(status == MOTOR_ROTATE) {
+
+		int x_dir,y_dir = DIR_NONE;
+		if(arg_in.chick == DEVICE_CTRL_MOTOR_HOR_RIGHT)
+			y_dir = DIR_UP;
+		else if(arg_in.chick == DEVICE_CTRL_MOTOR_HOR_LEFT)
+			y_dir = DIR_DOWN;
+		else
+			y_dir = DIR_NONE;
+
+		if(arg_in.duck == DEVICE_CTRL_MOTOR_VER_UP)
+			x_dir = DIR_LEFT;
+		else if(arg_in.duck == DEVICE_CTRL_MOTOR_VER_DOWN)
+			x_dir = DIR_RIGHT;
+		else
+			x_dir = DIR_NONE;
+
+		log_qcy(DEBUG_VERBOSE, "iot_ctrl_motor_auto rotate now x_dir = %d, x_step=%d, y_dir=%d,y_step=%d|",
+				x_dir, arg_in.dog, y_dir, arg_in.tiger);
+
+		ret = motor_auto_roate(arg_in.tiger, x_dir, arg_in.dog, y_dir, device_config_);
 	}
 
 	return ret;
@@ -764,8 +807,20 @@ static int server_message_proc(void)
 			ret = iot_ctrl_led(msg.arg);
 			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
 					NULL, 0);
+		} else if( msg.arg_in.dog == DEVICE_CTRL_MOTOR_AUTO ) {
+			ret = iot_ctrl_motor_auto(msg.arg_in, MOTOR_AUTO);
+			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
+					NULL, 0);
+		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_STOP ) {
+			ret = iot_ctrl_motor_auto(msg.arg_in ,MOTOR_STOP);
+			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
+					NULL, 0);
 		} else if( msg.arg_in.cat == DEVICE_CTRL_DAY_NIGHT_MODE ) {
 			ret = iot_ctrl_day_night(msg.arg);
+			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
+					NULL, 0);
+		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_ROTATE ) {
+			ret = iot_ctrl_motor_auto(msg.arg_in ,MOTOR_ROTATE);
 			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
 					NULL, 0);
 		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_HOR_LEFT ) {
@@ -802,14 +857,6 @@ static int server_message_proc(void)
 					NULL, 0);
 		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_RIGHT_DOWN ) {
 			ret = iot_ctrl_motor(MOTOR_BOTH, DIR_RIGHT_DOWN);
-			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
-					NULL, 0);
-		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_AUTO ) {
-			ret = iot_ctrl_motor_auto(MOTOR_AUTO);
-			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
-					NULL, 0);
-		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_STOP ) {
-			ret = iot_ctrl_motor_auto(MOTOR_STOP);
 			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
 					NULL, 0);
 		}
@@ -944,10 +991,17 @@ static void *storage_detect_func(void *arg)
                 }
                 if(key_down_flag)
                 {
+                	device_iot_config_t tmp;
+					memset(&tmp, 0 , sizeof(tmp));
+					tmp.led1_onoff = LED_OFF;
+					tmp.led2_onoff = LED_ON;
+					iot_ctrl_led(&tmp);
+
                 	key_down_flag = 0;
                 	msg.message = MSG_SPEAKER_CTL_PLAY;
                 	msg.arg_in.cat = SPEAKER_CTL_RESET;
 					send_message(SERVER_SPEAKER, &msg);
+
 					sleep(5);
 					system(WIFI_RESET_FILE_SH);
                 }
@@ -1209,7 +1263,7 @@ static void *daynight_mode_func(void *arg)
     	if(device_config_.soft_hard_ldr)
     	{
     		value = rts_av_get_isp_daynight_statis();
-    		log_qcy(DEBUG_SERIOUS, "day night mode value = %d", value);
+    		log_qcy(DEBUG_VERBOSE, "day night mode value = %d", value);
 
     		if(value == 2)
     		{
@@ -1360,7 +1414,7 @@ static int server_start(void)
 	ret = ctl_ircut(GPIO_ON);
 	ret |= ctl_irled(&device_config_ ,GPIO_OFF);
 
-	ret = ctl_spk_enable(&device_config_, GPIO_OFF);
+	ret = ctl_spk_enable(&device_config_, GPIO_ON);
 	if(ret)
 	{
 		log_qcy(DEBUG_SERIOUS, "close spk failed\n");
