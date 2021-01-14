@@ -35,7 +35,7 @@
 #include "../../server/miio/miio_interface.h"
 #include "../../server/miss/miss_interface.h"
 #include "../../server/recorder/recorder_interface.h"
-#include "../../server/speaker/speaker_interface.h"
+//#include "../../server/speaker/speaker_interface.h"
 //server header
 #include "device.h"
 #include "config.h"
@@ -608,9 +608,10 @@ static int send_message(int receiver, message_t *msg)
 	case SERVER_RECORDER:
 		st = server_recorder_message(msg);
 		break;
-	case SERVER_SPEAKER:
+/*	case SERVER_SPEAKER:
 		st = server_speaker_message(msg);
 		break;
+*/
 	case SERVER_PLAYER:
 		st = server_player_message(msg);
 		break;
@@ -998,9 +999,9 @@ static void *storage_detect_func(void *arg)
 					iot_ctrl_led(&tmp);
 
                 	key_down_flag = 0;
-                	msg.message = MSG_SPEAKER_CTL_PLAY;
+                	msg.message = MSG_AUDIO_SPEAKER_CTL_PLAY;
                 	msg.arg_in.cat = SPEAKER_CTL_RESET;
-					send_message(SERVER_SPEAKER, &msg);
+					send_message(SERVER_AUDIO, &msg);
 
 					sleep(5);
 					system(WIFI_RESET_FILE_SH);
@@ -1585,7 +1586,7 @@ int server_device_message(message_t *msg)
 		pthread_cond_signal(&d_cond);
 		pthread_mutex_unlock(&d_mutex);
 	}
-	log_qcy(DEBUG_INFO, "push into the device message queue: sender=%s, message=%x, ret=%d", get_string_name(msg->sender), msg->message, ret);
+	log_qcy(DEBUG_VERBOSE, "push into the device message queue: sender=%s, message=%x, ret=%d", get_string_name(msg->sender), msg->message, ret);
 	ret = pthread_rwlock_unlock(&message.lock);
 	if (ret)
 		log_qcy(DEBUG_SERIOUS, "add message unlock fail, ret = %d\n", ret);
