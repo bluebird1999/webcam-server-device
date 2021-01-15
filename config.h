@@ -23,6 +23,9 @@
  * structure
  */
 typedef struct device_config_t {
+	unsigned int			capture_def_volume;
+	unsigned int			playback_def_volume;
+	unsigned int			real_amic_capture;
 	unsigned int			volume_step;
 	unsigned int			soft_hard_ldr;
 	unsigned int			day_night_lim;

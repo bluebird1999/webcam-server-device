@@ -61,7 +61,7 @@ static int 					motor_reset_thread_flag = 0;
 static int					umount_server_flag = 0;
 static int					umount_flag = 0;
 static int					step_motor_init_flag = 0;
-static int					motor_check_flag = 0;
+static int					motor_check_flag = 1;
 static device_config_t		device_config_;
 static server_info_t 		info;
 static message_buffer_t		message;
@@ -608,10 +608,9 @@ static int send_message(int receiver, message_t *msg)
 	case SERVER_RECORDER:
 		st = server_recorder_message(msg);
 		break;
-/*	case SERVER_SPEAKER:
-		st = server_speaker_message(msg);
-		break;
-*/
+//	case SERVER_SPEAKER:
+//		st = server_speaker_message(msg);
+//		break;
 	case SERVER_PLAYER:
 		st = server_player_message(msg);
 		break;
@@ -810,56 +809,56 @@ static int server_message_proc(void)
 					NULL, 0);
 		} else if( msg.arg_in.dog == DEVICE_CTRL_MOTOR_AUTO ) {
 			ret = iot_ctrl_motor_auto(msg.arg_in, MOTOR_AUTO);
-			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
-					NULL, 0);
+//			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
+//					NULL, 0);
 		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_STOP ) {
 			ret = iot_ctrl_motor_auto(msg.arg_in ,MOTOR_STOP);
-			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
-					NULL, 0);
+//			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
+//					NULL, 0);
 		} else if( msg.arg_in.cat == DEVICE_CTRL_DAY_NIGHT_MODE ) {
 			ret = iot_ctrl_day_night(msg.arg);
 			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
 					NULL, 0);
 		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_ROTATE ) {
 			ret = iot_ctrl_motor_auto(msg.arg_in ,MOTOR_ROTATE);
-			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
-					NULL, 0);
+//			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
+//					NULL, 0);
 		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_HOR_LEFT ) {
 			ret = iot_ctrl_motor(MOTOR_STEP_Y, DIR_LEFT);
-			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
-					NULL, 0);
+//			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
+//					NULL, 0);
 		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_HOR_RIGHT ) {
 			ret = iot_ctrl_motor(MOTOR_STEP_Y, DIR_RIGHT);
-			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
-					NULL, 0);
+//			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
+//					NULL, 0);
 		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_VER_DOWN ) {
 			ret = iot_ctrl_motor(MOTOR_STEP_X, DIR_DOWN);
-			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
-					NULL, 0);
+//			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
+//					NULL, 0);
 		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_VER_UP ) {
 			ret = iot_ctrl_motor(MOTOR_STEP_X, DIR_UP);
-			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
-					NULL, 0);
+//			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
+//					NULL, 0);
 		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_RESET ) {
 			ret = iot_ctrl_motor_reset();
-			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
-					NULL, 0);
+//			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
+//					NULL, 0);
 		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_LEFT_UP ) {
 			ret = iot_ctrl_motor(MOTOR_BOTH, DIR_LEFT_UP);
-			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
-					NULL, 0);
+//			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
+//					NULL, 0);
 		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_LEFT_DOWN ) {
 			ret = iot_ctrl_motor(MOTOR_BOTH, DIR_LEFT_DOWN);
-			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
-					NULL, 0);
+//			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
+//					NULL, 0);
 		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_RIGHT_UP ) {
 			ret = iot_ctrl_motor(MOTOR_BOTH, DIR_RIGHT_UP);
-			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
-					NULL, 0);
+//			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
+//					NULL, 0);
 		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_RIGHT_DOWN ) {
 			ret = iot_ctrl_motor(MOTOR_BOTH, DIR_RIGHT_DOWN);
-			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
-					NULL, 0);
+//			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
+//					NULL, 0);
 		}
 		break;
 	default:
@@ -1230,7 +1229,6 @@ static void *daynight_mode_func(void *arg)
 	int value = 0;
 	int old_value = -1;
 	int lim_value = 0;
-	int discard_count = 0;
 	server_status_t st;
 
     signal(SIGINT, (__sighandler_t)server_thread_termination);
@@ -1246,9 +1244,6 @@ static void *daynight_mode_func(void *arg)
 	}
 
 	daynight_mode_func_lock = 1;
-
-	//wait video init
-	usleep(1000 * 1000 * 5); //5s
 
     while(!server_get_status(STATUS_TYPE_EXIT) && !daynight_mode_func_exit)
     {
@@ -1268,11 +1263,12 @@ static void *daynight_mode_func(void *arg)
 
     		if(value == 2)
     		{
-				video_isp_set_attr(RTS_VIDEO_CTRL_ID_IR_MODE, RTS_ISP_IR_NIGHT);
-				video_isp_set_attr(RTS_VIDEO_CTRL_ID_GRAY_MODE, RTS_ISP_IR_NIGHT);
+				video_isp_set_attr(RTS_VIDEO_CTRL_ID_IR_MODE, RTS_ISP_IR_DAY);
+				video_isp_set_attr(RTS_VIDEO_CTRL_ID_GRAY_MODE, RTS_ISP_IR_DAY);
+				continue;
     		}
 
-    		if(discard_count > 4 && value >= 0 && value < 2)
+    		if(value >= 0 && value < 2)
     		{
 				if(value != old_value)
 				{
@@ -1297,7 +1293,7 @@ static void *daynight_mode_func(void *arg)
 					}
 				}
     		}
-    		discard_count++;
+
     	} else {
     		value = rts_io_adc_get_value(ADC_CHANNEL_0);
     		log_qcy(DEBUG_VERBOSE, "day night mode value = %d", value);
@@ -1399,17 +1395,28 @@ static int server_start(void)
 {
 	int ret = 0;
 	audio_info_t_m ctrl_audio;
+	char ackbuf[AMIXER_BUFFER];
 
-	memset(&ctrl_audio, 0, sizeof(ctrl_audio));
-	ctrl_audio.volume = 100;
+	memset(ackbuf, 0, AMIXER_BUFFER);
+	snprintf(ackbuf,AMIXER_BUFFER, AMIXER_CSET,11,device_config_.real_amic_capture);
+	system(ackbuf);
+	memset(ackbuf, 0, AMIXER_BUFFER);
+	snprintf(ackbuf,AMIXER_BUFFER, AMIXER_CSET,8,device_config_.capture_def_volume);
+	system(ackbuf);
+	memset(ackbuf, 0, AMIXER_BUFFER);
+	snprintf(ackbuf,AMIXER_BUFFER, AMIXER_CSET,1,device_config_.playback_def_volume);
+	system(ackbuf);
 
-	ret = adjust_audio_volume(&ctrl_audio, device_config_);
-	ret |= adjust_input_audio_volume(&ctrl_audio, device_config_);
-	if(ret)
-	{
-		log_qcy(DEBUG_SERIOUS, "adjust_input_audio_volume failed\n");
-		goto restart;
-	}
+//	memset(&ctrl_audio, 0, sizeof(ctrl_audio));
+//	ctrl_audio.volume = 100;
+//
+//	ret = adjust_audio_volume(&ctrl_audio, device_config_);
+//	ret |= adjust_input_audio_volume(&ctrl_audio, device_config_);
+//	if(ret)
+//	{
+//		log_qcy(DEBUG_SERIOUS, "adjust_input_audio_volume failed\n");
+//		goto restart;
+//	}
 
 	//day mode
 	ret = ctl_ircut(GPIO_ON);

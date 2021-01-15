@@ -28,6 +28,9 @@
 #define MOTOR_AUTO		1
 #define MOTOR_STOP		0
 
+#define AMIXER_CSET		"amixer cset numid=%d %d"
+#define	AMIXER_BUFFER	1024
+
 /*
  * structure
  */

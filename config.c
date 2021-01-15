@@ -26,6 +26,9 @@
 static pthread_rwlock_t			lock;
 static device_config_t			device_config;
 static config_map_t device_config_map[] = {
+	{"capture_def_volume",     		&(device_config.capture_def_volume),      	cfg_u32, 		"30",0,0,100,},
+	{"playback_def_volume",     	&(device_config.playback_def_volume),       cfg_u32, 		"127",0,0,127,},
+	{"real_amic_capture", 	    	&(device_config.real_amic_capture),       	cfg_u32, 		"5",0,0,69,},
 	{"volume_step",     			&(device_config.volume_step),      			cfg_u32, 		"10",0,0,100,},
 	{"soft_hard_ldr",     			&(device_config.soft_hard_ldr),      		cfg_u32, 		"1",0,0,1,},
 	{"day_night_lim",     			&(device_config.day_night_lim),      		cfg_u32, 		"3000",0,0,3100,},
