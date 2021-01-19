@@ -35,6 +35,7 @@
 #include "../../server/miio/miio_interface.h"
 #include "../../server/miss/miss_interface.h"
 #include "../../server/recorder/recorder_interface.h"
+#include "../../server/video3/video3_interface.h"
 //#include "../../server/speaker/speaker_interface.h"
 //server header
 #include "device.h"
@@ -61,7 +62,7 @@ static int 					motor_reset_thread_flag = 0;
 static int					umount_server_flag = 0;
 static int					umount_flag = 0;
 static int					step_motor_init_flag = 0;
-static int					motor_check_flag = 1;
+static int					motor_check_flag = 0;
 static device_config_t		device_config_;
 static server_info_t 		info;
 static message_buffer_t		message;
@@ -199,16 +200,16 @@ static int iot_ctrl_motor_auto(message_arg_t arg_in, int status)
 		switch(dir)
 		{
 			case DEVICE_CTRL_MOTOR_HOR_LEFT :
-				dir = DIR_AUTO_UP;
-				break;
-			case DEVICE_CTRL_MOTOR_HOR_RIGHT:
-				dir = DIR_AUTO_DOWN ;
-				break;
-			case DEVICE_CTRL_MOTOR_VER_UP:
 				dir = DIR_AUTO_LEFT;
 				break;
-			case DEVICE_CTRL_MOTOR_VER_DOWN:
+			case DEVICE_CTRL_MOTOR_HOR_RIGHT:
 				dir = DIR_AUTO_RIGHT;
+				break;
+			case DEVICE_CTRL_MOTOR_VER_UP:
+				dir = DIR_AUTO_UP;
+				break;
+			case DEVICE_CTRL_MOTOR_VER_DOWN:
+				dir = DIR_AUTO_DOWN;
 				break;
 			default:
 				log_qcy(DEBUG_SERIOUS, "not support dir");
@@ -224,23 +225,23 @@ static int iot_ctrl_motor_auto(message_arg_t arg_in, int status)
 
 		int x_dir,y_dir = DIR_NONE;
 		if(arg_in.chick == DEVICE_CTRL_MOTOR_HOR_RIGHT)
-			y_dir = DIR_UP;
-		else if(arg_in.chick == DEVICE_CTRL_MOTOR_HOR_LEFT)
-			y_dir = DIR_DOWN;
-		else
-			y_dir = DIR_NONE;
-
-		if(arg_in.duck == DEVICE_CTRL_MOTOR_VER_UP)
 			x_dir = DIR_LEFT;
-		else if(arg_in.duck == DEVICE_CTRL_MOTOR_VER_DOWN)
+		else if(arg_in.chick == DEVICE_CTRL_MOTOR_HOR_LEFT)
 			x_dir = DIR_RIGHT;
 		else
 			x_dir = DIR_NONE;
 
+		if(arg_in.duck == DEVICE_CTRL_MOTOR_VER_UP)
+			y_dir = DIR_DOWN;
+		else if(arg_in.duck == DEVICE_CTRL_MOTOR_VER_DOWN)
+			y_dir = DIR_UP;
+		else
+			y_dir = DIR_NONE;
+
 		log_qcy(DEBUG_VERBOSE, "iot_ctrl_motor_auto rotate now x_dir = %d, x_step=%d, y_dir=%d,y_step=%d|",
 				x_dir, arg_in.dog, y_dir, arg_in.tiger);
 
-		ret = motor_auto_roate(arg_in.tiger, x_dir, arg_in.dog, y_dir, device_config_);
+		ret = motor_auto_roate(arg_in.dog, x_dir, arg_in.tiger, y_dir, device_config_);
 	}
 
 	return ret;
@@ -616,6 +617,9 @@ static int send_message(int receiver, message_t *msg)
 		break;
 	case SERVER_MANAGER:
 		st = manager_message(msg);
+		break;
+	case SERVER_VIDEO3:
+		st = server_video3_message(msg);
 		break;
 	}
 	return st;
@@ -1013,7 +1017,7 @@ static void *storage_detect_func(void *arg)
 						{
 							msg.message = MSG_DEVICE_ACTION;
 							msg.arg_in.cat = DEVICE_ACTION_MOTO_RES_OK;
-							send_message(SERVER_MIIO, &msg);
+							send_message(SERVER_VIDEO3, &msg);
 							motor_check_flag = 1;
 						}
 					}
@@ -1394,29 +1398,6 @@ static int server_idle(void)
 static int server_start(void)
 {
 	int ret = 0;
-	audio_info_t_m ctrl_audio;
-	char ackbuf[AMIXER_BUFFER];
-
-	memset(ackbuf, 0, AMIXER_BUFFER);
-	snprintf(ackbuf,AMIXER_BUFFER, AMIXER_CSET,11,device_config_.real_amic_capture);
-	system(ackbuf);
-	memset(ackbuf, 0, AMIXER_BUFFER);
-	snprintf(ackbuf,AMIXER_BUFFER, AMIXER_CSET,8,device_config_.capture_def_volume);
-	system(ackbuf);
-	memset(ackbuf, 0, AMIXER_BUFFER);
-	snprintf(ackbuf,AMIXER_BUFFER, AMIXER_CSET,1,device_config_.playback_def_volume);
-	system(ackbuf);
-
-//	memset(&ctrl_audio, 0, sizeof(ctrl_audio));
-//	ctrl_audio.volume = 100;
-//
-//	ret = adjust_audio_volume(&ctrl_audio, device_config_);
-//	ret |= adjust_input_audio_volume(&ctrl_audio, device_config_);
-//	if(ret)
-//	{
-//		log_qcy(DEBUG_SERIOUS, "adjust_input_audio_volume failed\n");
-//		goto restart;
-//	}
 
 	//day mode
 	ret = ctl_ircut(GPIO_ON);
