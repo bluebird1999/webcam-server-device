@@ -200,16 +200,16 @@ static int iot_ctrl_motor_auto(message_arg_t arg_in, int status)
 		switch(dir)
 		{
 			case DEVICE_CTRL_MOTOR_HOR_LEFT :
-				dir = DIR_AUTO_LEFT;
-				break;
-			case DEVICE_CTRL_MOTOR_HOR_RIGHT:
-				dir = DIR_AUTO_RIGHT;
-				break;
-			case DEVICE_CTRL_MOTOR_VER_UP:
 				dir = DIR_AUTO_UP;
 				break;
-			case DEVICE_CTRL_MOTOR_VER_DOWN:
+			case DEVICE_CTRL_MOTOR_HOR_RIGHT:
 				dir = DIR_AUTO_DOWN;
+				break;
+			case DEVICE_CTRL_MOTOR_VER_UP:
+				dir = DIR_AUTO_LEFT;
+				break;
+			case DEVICE_CTRL_MOTOR_VER_DOWN:
+				dir = DIR_AUTO_RIGHT;
 				break;
 			default:
 				log_qcy(DEBUG_SERIOUS, "not support dir");
@@ -225,18 +225,18 @@ static int iot_ctrl_motor_auto(message_arg_t arg_in, int status)
 
 		int x_dir,y_dir = DIR_NONE;
 		if(arg_in.chick == DEVICE_CTRL_MOTOR_HOR_RIGHT)
-			x_dir = DIR_LEFT;
+			y_dir = DIR_UP;
 		else if(arg_in.chick == DEVICE_CTRL_MOTOR_HOR_LEFT)
+			y_dir = DIR_DOWN;
+		else
+			y_dir = DIR_NONE;
+
+		if(arg_in.duck == DEVICE_CTRL_MOTOR_VER_UP)
+			x_dir = DIR_LEFT;
+		else if(arg_in.duck == DEVICE_CTRL_MOTOR_VER_DOWN)
 			x_dir = DIR_RIGHT;
 		else
 			x_dir = DIR_NONE;
-
-		if(arg_in.duck == DEVICE_CTRL_MOTOR_VER_UP)
-			y_dir = DIR_DOWN;
-		else if(arg_in.duck == DEVICE_CTRL_MOTOR_VER_DOWN)
-			y_dir = DIR_UP;
-		else
-			y_dir = DIR_NONE;
 
 		log_qcy(DEBUG_VERBOSE, "iot_ctrl_motor_auto rotate now x_dir = %d, x_step=%d, y_dir=%d,y_step=%d|",
 				x_dir, arg_in.dog, y_dir, arg_in.tiger);
@@ -568,7 +568,7 @@ static int send_iot_ack(message_t *org_msg, message_t *msg, int id, int receiver
 {
 	int ret = 0;
     /********message body********/
-	msg_init(msg);
+//	msg_init(msg);
 	memcpy(&(msg->arg_pass), &(org_msg->arg_pass),sizeof(message_arg_t));
 	msg->message = id | 0x1000;
 	msg->sender = msg->receiver = SERVER_DEVICE;
@@ -731,6 +731,14 @@ static int server_message_proc(void)
 		break;
 	case MSG_MANAGER_TIMER_ACK:
 		((HANDLER)msg.arg)();
+		break;
+	case MSG_DEVICE_PROPERTY_GET:
+		if(msg.arg_pass.cat == DEVICE_ACTION_MOTO_STATUS)
+		{
+			send_msg.arg_in.dog = device_config_.motor_enable ? motor_check_flag : 1;
+			send_iot_ack(&msg, &send_msg, MSG_DEVICE_PROPERTY_GET_ACK, msg.receiver, ret,
+							NULL, 0);
+		}
 		break;
 	case MSG_DEVICE_GET_PARA:
 		if( msg.arg_in.cat == DEVICE_CTRL_SD_INFO ) {
@@ -1015,9 +1023,6 @@ static void *storage_detect_func(void *arg)
 					{
 						if(!check_motor_res_status())
 						{
-							msg.message = MSG_DEVICE_ACTION;
-							msg.arg_in.cat = DEVICE_ACTION_MOTO_RES_OK;
-							send_message(SERVER_VIDEO3, &msg);
 							motor_check_flag = 1;
 						}
 					}
@@ -1574,7 +1579,7 @@ int server_device_message(message_t *msg)
 		pthread_cond_signal(&d_cond);
 		pthread_mutex_unlock(&d_mutex);
 	}
-	log_qcy(DEBUG_VERBOSE, "push into the device message queue: sender=%s, message=%x, ret=%d", get_string_name(msg->sender), msg->message, ret);
+	log_qcy(DEBUG_SERIOUS, "push into the device message queue: sender=%s, message=%x, ret=%d", get_string_name(msg->sender), msg->message, ret);
 	ret = pthread_rwlock_unlock(&message.lock);
 	if (ret)
 		log_qcy(DEBUG_SERIOUS, "add message unlock fail, ret = %d\n", ret);
