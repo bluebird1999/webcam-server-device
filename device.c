@@ -129,6 +129,7 @@ static void *led_flash_func(void *arg);
 static void *motor_reset_func(void *arg);
 static char *get_string_name(int i);
 static int video_isp_set_attr(unsigned int id, int value);
+static void play_voice(int server_type, int type);
 
 
 #define BUTTON_DOWN 1
@@ -142,6 +143,17 @@ static int video_isp_set_attr(unsigned int id, int value);
  */
 
 
+static void play_voice(int server_type, int type)
+{
+	message_t message;
+	msg_init(&message);
+
+	message.sender = message.receiver = server_type;
+	message.message = MSG_AUDIO_SPEAKER_CTL_PLAY;
+	message.arg_in.cat = type;
+
+	manager_common_send_message(SERVER_AUDIO,    &message);
+}
 
 static void *motor_reset_func(void *arg)
 {
@@ -786,7 +798,7 @@ static int server_message_proc(void)
 
 			misc_set_bit(&umount_server_flag, msg.receiver, 1);
 			format_flag |= msg.arg_pass.wolf;
-			if(umount_server_flag == 1536)
+			if(umount_server_flag == 1536 && !umount_flag)
 			{
 				system("sync");
 				system("sync");
@@ -798,9 +810,9 @@ static int server_message_proc(void)
 				}else{
 					ret = umount_sd();
 					umount_flag = 1;
+					play_voice(SERVER_DEVICE, SPEAKER_CTL_SD_EJECTED);
 				}
-//				send_iot_ack(&rev_msg_tmp, &send_msg, MSG_DEVICE_ACTION_ACK, rev_msg_tmp.receiver, ret,
-//						NULL, 0);
+
 				umount_server_flag = 0;
 				format_flag = 0;
 			}
@@ -819,58 +831,34 @@ static int server_message_proc(void)
 			ret = iot_ctrl_led(msg.arg);
 			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
 					NULL, 0);
-		} else if( msg.arg_in.dog == DEVICE_CTRL_MOTOR_AUTO ) {
-			ret = iot_ctrl_motor_auto(msg.arg_in, MOTOR_AUTO);
-//			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
-//					NULL, 0);
-		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_STOP ) {
-			ret = iot_ctrl_motor_auto(msg.arg_in ,MOTOR_STOP);
-//			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
-//					NULL, 0);
 		} else if( msg.arg_in.cat == DEVICE_CTRL_DAY_NIGHT_MODE ) {
 			ret = iot_ctrl_day_night(msg.arg);
 			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
 					NULL, 0);
+		} else if( msg.arg_in.dog == DEVICE_CTRL_MOTOR_AUTO ) {
+			ret = iot_ctrl_motor_auto(msg.arg_in, MOTOR_AUTO);
+		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_STOP ) {
+			ret = iot_ctrl_motor_auto(msg.arg_in ,MOTOR_STOP);
 		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_ROTATE ) {
 			ret = iot_ctrl_motor_auto(msg.arg_in ,MOTOR_ROTATE);
-//			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
-//					NULL, 0);
 		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_HOR_LEFT ) {
 			ret = iot_ctrl_motor(MOTOR_STEP_Y, DIR_LEFT);
-//			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
-//					NULL, 0);
 		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_HOR_RIGHT ) {
 			ret = iot_ctrl_motor(MOTOR_STEP_Y, DIR_RIGHT);
-//			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
-//					NULL, 0);
 		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_VER_DOWN ) {
 			ret = iot_ctrl_motor(MOTOR_STEP_X, DIR_DOWN);
-//			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
-//					NULL, 0);
 		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_VER_UP ) {
 			ret = iot_ctrl_motor(MOTOR_STEP_X, DIR_UP);
-//			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
-//					NULL, 0);
 		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_RESET ) {
 			ret = iot_ctrl_motor_reset();
-//			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
-//					NULL, 0);
 		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_LEFT_UP ) {
 			ret = iot_ctrl_motor(MOTOR_BOTH, DIR_LEFT_UP);
-//			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
-//					NULL, 0);
 		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_LEFT_DOWN ) {
 			ret = iot_ctrl_motor(MOTOR_BOTH, DIR_LEFT_DOWN);
-//			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
-//					NULL, 0);
 		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_RIGHT_UP ) {
 			ret = iot_ctrl_motor(MOTOR_BOTH, DIR_RIGHT_UP);
-//			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
-//					NULL, 0);
 		} else if( msg.arg_in.cat == DEVICE_CTRL_MOTOR_RIGHT_DOWN ) {
 			ret = iot_ctrl_motor(MOTOR_BOTH, DIR_RIGHT_DOWN);
-//			send_iot_ack(&msg, &send_msg, MSG_DEVICE_CTRL_DIRECT_ACK, msg.receiver, ret,
-//					NULL, 0);
 		}
 		break;
 	default:
@@ -1010,10 +998,7 @@ static void *storage_detect_func(void *arg)
 					iot_ctrl_led(&tmp);
 
                 	key_down_flag = 0;
-                	msg.message = MSG_AUDIO_SPEAKER_CTL_PLAY;
-                	msg.arg_in.cat = SPEAKER_CTL_RESET;
-					send_message(SERVER_AUDIO, &msg);
-
+					play_voice(SERVER_DEVICE, SPEAKER_CTL_RESET);
 					sleep(5);
 					system(WIFI_RESET_FILE_SH);
                 }
@@ -1031,6 +1016,7 @@ static void *storage_detect_func(void *arg)
             default:
                 if(FD_ISSET(hotplug_sock,&fds))
                 {
+                	memset(buf, 0, SIZE1024);
                     ret = recv(hotplug_sock, buf, SIZE1024 , 0);
                     if(ret > 0)
                     {
@@ -1039,6 +1025,7 @@ static void *storage_detect_func(void *arg)
 							ptr = strstr(buf, "add@/devices/platform/ocp/18300000.sdhc");
 							if(ptr != NULL)
 							{
+								device_iot_config_t tmp;
 								sd_card_insert = 1;
 								umount_flag = 0;
 								msg.message = MSG_DEVICE_ACTION;
@@ -1047,12 +1034,16 @@ static void *storage_detect_func(void *arg)
 								while(!is_mounted(device_config_.sd_mount_path))
 									usleep(1000 * 500);
 
+								iot_get_sd_info(&tmp);
+								msg.arg = (void *)&tmp;
+								msg.arg_size = sizeof(tmp);
 								for(i=0;i<MAX_SERVER;i++) {
 									if( misc_get_bit( device_config_.storage_detect_notify, i) ) {
 										log_qcy(DEBUG_VERBOSE, "insert send to ->[%d]\n",i);
 										send_message(i, &msg);
 									}
 								}
+								play_voice(SERVER_DEVICE, SPEAKER_CTL_SD_PLUG_SUCCESS);
 							}
                     	}
                     	if(sd_card_insert == 1)
@@ -1073,6 +1064,7 @@ static void *storage_detect_func(void *arg)
 										}
 									}
 									umount_flag = 1;
+									play_voice(SERVER_DEVICE, SPEAKER_CTL_SD_EJECTED);
 								}
 								sd_card_insert = 0;
 
@@ -1102,18 +1094,6 @@ static void *storage_detect_func(void *arg)
                 		{
                 			log_qcy(DEBUG_SERIOUS, "wps key up\n");
                 			key_down_flag = 0;
-//                			end_time = time_get_now_ms();
-//
-//                			interval_time = end_time - start_time;
-//                			if(interval_time > 3000 && interval_time < 10000)
-//                			{
-//                				msg.message = MSG_SPEAKER_CTL_PLAY;
-//                				msg.arg_in.cat = DEVICE_ACTION_SD_CAP_ALARM;
-//                				msg.arg_in.cat = SPEAKER_CTL_RESET;
-//                				send_message(SERVER_SPEAKER, &msg);
-//                				sleep(3);
-//                				system(WIFI_RESET_FILE_SH);
-//                			}
                 		}
                 	}
 				}
@@ -1160,11 +1140,6 @@ static int video_isp_set_attr(unsigned int id, int value)
 		log_qcy(DEBUG_SERIOUS, "get isp attr fail, ret = %d\n", ret);
 		return ret;
 	}
-	//value = isp_get_valid_value(id, value, &ctrl);
-/*	log_qcy(DEBUG_SERIOUS, "%s min = %d, max = %d, step = %d, default = %d, cur = %d\n",
-			 ctrl.name, ctrl.minimum, ctrl.maximum,
-			 ctrl.step, ctrl.default_value, ctrl.current_value);
-*/
 	ctrl.current_value = value;
 	ret = rts_av_set_isp_ctrl(id, &ctrl);
 	if (ret) {
@@ -1176,11 +1151,6 @@ static int video_isp_set_attr(unsigned int id, int value)
 		log_qcy(DEBUG_SERIOUS, "get isp attr fail, ret = %d\n", ret);
 		return ret;
 	}
-/*
-	log_qcy(DEBUG_SERIOUS, "%s min = %d, max = %d, step = %d, default = %d, cur = %d\n",
-			 ctrl.name, ctrl.minimum, ctrl.maximum,
-			 ctrl.step, ctrl.default_value, ctrl.current_value);
-*/
 	return 0;
 }
 

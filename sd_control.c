@@ -517,10 +517,22 @@ err:
     if(is_mounted(mountpath))
     {
     	system("sync");
-		sleep(1);
+
+    	struct space_info_t space_info_t;
+    	device_iot_config_t tmp;
+    	memset(&tmp, 0 , sizeof(tmp));
+    	ret = get_storage_info(SD_MOUNT_PATH, &space_info_t);
+
+    	tmp.sd_iot_info.plug = SD_STATUS_PLUG;
+    	tmp.sd_iot_info.totalBytes = space_info_t.totalBytes;
+    	tmp.sd_iot_info.freeBytes = space_info_t.freeBytes;
+    	tmp.sd_iot_info.usedBytes = space_info_t.usedBytes;
+
 		msg.message = MSG_DEVICE_ACTION;
 		msg.arg_in.cat = DEVICE_ACTION_SD_INSERT;
 		msg.arg_in.dog = SD_STATUS_PLUG;
+		msg.arg = (void *)&tmp;
+		msg.arg_size = sizeof(tmp);
 		server_recorder_message(&msg);
 		server_player_message(&msg);
 		server_miio_message(&msg);
