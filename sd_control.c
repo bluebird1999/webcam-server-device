@@ -368,6 +368,11 @@ static int get_sd_block_mountpath(char *block_path_t, char *mountpath_t)
     fclose(fp);
 
     mount_rule = strstr(data, "/dev/mmcblk");
+    if(!mount_rule)
+    {
+    	log_qcy(DEBUG_SERIOUS, "SD card do not mount\n");
+    	return -1;
+    }
     if(get_rule(block_path, mountpath, mount_rule))
     {
         log_qcy(DEBUG_VERBOSE, "can not prase rule\n");

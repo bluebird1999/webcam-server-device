@@ -24,7 +24,7 @@ static int motor_status = MOTOR_NONE;
 
 int check_motor_res_status()
 {
-	if(motor_status != MOTOR_READY)
+	if(motor_status != MOTOR_RESET)
 	{
 		log_qcy(DEBUG_SERIOUS, "motor not ready");
 		return -1;
@@ -33,11 +33,13 @@ int check_motor_res_status()
 	ioctl(fd, RTS_PTZ_IOC_G_INFO, &ptz_info);
 
 	log_qcy(DEBUG_SERIOUS, "x is %d, y is %d\n", ptz_info.xmotor_info.pos, ptz_info.ymotor_info.pos);
-	if((ptz_info.xmotor_info.pos == ptz_info.xmotor_info.max_steps / 2) && (ptz_info.ymotor_info.pos == ptz_info.ymotor_info.max_steps / 2))
+	if((ptz_info.xmotor_info.pos == 200) && (ptz_info.ymotor_info.pos == ptz_info.ymotor_info.max_steps / 2))
+	{
+		motor_status = MOTOR_READY;
 		return 0;
+	}
 	else
 		return -1;
-
 }
 
 int motor_reset()
@@ -53,9 +55,7 @@ int motor_reset()
 	motor_status = MOTOR_RESET;
 	//need time, must wait dirver finish
 	ioctl(fd, RTS_PTZ_IOC_RESET, NULL);
-	sleep(5);
 
-	motor_status = MOTOR_READY;
 	return ret;
 }
 
@@ -81,7 +81,7 @@ int init_motor(device_config_t config_t)
 	ioctl(fd, RTS_PTZ_IOC_RESET, NULL);
 	sleep(3);
 
-	motor_status = MOTOR_READY;
+	motor_status = MOTOR_RESET;
 
 	return ret;
 err:

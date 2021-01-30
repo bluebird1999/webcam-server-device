@@ -165,6 +165,7 @@ static void *motor_reset_func(void *arg)
     pthread_detach(pthread_self());
 
     motor_reset_thread_flag = 1;
+    motor_check_flag = 0;
 
 	ret = motor_reset();
 	if(ret)
@@ -633,6 +634,9 @@ static int send_message(int receiver, message_t *msg)
 	case SERVER_VIDEO3:
 		st = server_video3_message(msg);
 		break;
+	case SERVER_SCANNER:
+		st = server_scanner_message(msg);
+		break;
 	}
 	return st;
 }
@@ -798,7 +802,7 @@ static int server_message_proc(void)
 
 			misc_set_bit(&umount_server_flag, msg.receiver, 1);
 			format_flag |= msg.arg_pass.wolf;
-			if(umount_server_flag == 1536 && !umount_flag)
+			if(umount_server_flag == 1536)
 			{
 				system("sync");
 				system("sync");
@@ -808,9 +812,8 @@ static int server_message_proc(void)
 				{
 					ret = format_sd();
 				}else{
-					ret = umount_sd();
-					umount_flag = 1;
-					play_voice(SERVER_DEVICE, SPEAKER_CTL_SD_EJECTED);
+					if(!umount_sd())
+						play_voice(SERVER_DEVICE, SPEAKER_CTL_SD_EJECTED);
 				}
 
 				umount_server_flag = 0;
@@ -991,14 +994,17 @@ static void *storage_detect_func(void *arg)
                 }
                 if(key_down_flag)
                 {
+            		log_qcy(DEBUG_SERIOUS, "begin reset system now");
+
+					play_voice(SERVER_DEVICE, SPEAKER_CTL_RESET);
+                	key_down_flag = 0;
+
                 	device_iot_config_t tmp;
 					memset(&tmp, 0 , sizeof(tmp));
 					tmp.led1_onoff = LED_OFF;
 					tmp.led2_onoff = LED_ON;
 					iot_ctrl_led(&tmp);
 
-                	key_down_flag = 0;
-					play_voice(SERVER_DEVICE, SPEAKER_CTL_RESET);
 					sleep(5);
 					system(WIFI_RESET_FILE_SH);
                 }
@@ -1064,7 +1070,7 @@ static void *storage_detect_func(void *arg)
 										}
 									}
 									umount_flag = 1;
-									play_voice(SERVER_DEVICE, SPEAKER_CTL_SD_EJECTED);
+//									play_voice(SERVER_DEVICE, SPEAKER_CTL_SD_EJECTED);
 								}
 								sd_card_insert = 0;
 
@@ -1253,13 +1259,12 @@ static void *daynight_mode_func(void *arg)
 				{
 					if(value >= lim_value)
 					{
+						video_isp_set_attr(RTS_VIDEO_CTRL_ID_IR_MODE, RTS_ISP_IR_NIGHT);
+						video_isp_set_attr(RTS_VIDEO_CTRL_ID_GRAY_MODE, RTS_ISP_IR_NIGHT);
 						//night
 						old_value = value;
 						ret = ctl_ircut(GPIO_OFF);
 						ret |= ctl_irled(&device_config_, GPIO_ON);
-
-						video_isp_set_attr(RTS_VIDEO_CTRL_ID_IR_MODE, RTS_ISP_IR_NIGHT);
-						video_isp_set_attr(RTS_VIDEO_CTRL_ID_GRAY_MODE, RTS_ISP_IR_NIGHT);
 
 					} else {
 						//day
@@ -1378,7 +1383,7 @@ static int server_start(void)
 	ret = ctl_ircut(GPIO_ON);
 	ret |= ctl_irled(&device_config_ ,GPIO_OFF);
 
-	ret = ctl_spk_enable(&device_config_, GPIO_ON);
+	ret = ctl_spk_enable(&device_config_, GPIO_OFF);
 	if(ret)
 	{
 		log_qcy(DEBUG_SERIOUS, "close spk failed\n");

@@ -74,6 +74,20 @@ int ctl_ircut(int on_off)
 		}
 	}
 
+	usleep(300 * 1000); //200ms
+	ret = set_gpio_value(rts_gpio_ircutbin, LED_ON);
+	if(ret)
+	{
+		log_qcy(DEBUG_SERIOUS, "set gpio failed\n");
+		return -1;
+	}
+	ret = set_gpio_value(rts_gpio_ircutain, LED_ON);
+	if(ret)
+	{
+		log_qcy(DEBUG_SERIOUS, "set gpio failed\n");
+		return -1;
+	}
+
 	return ret;
 }
 
